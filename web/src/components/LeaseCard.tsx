@@ -139,6 +139,7 @@ export function LeaseCard(props: { lease: Lease; role: Role; kp: Keypair; onChan
   const actions = leaseActions(lease, role, kp, now)
   const askLandlord = role === 'family' && lease.status === 'Funded'
   const paidTotal = lease.rent * BigInt(lease.paidPeriods)
+  const guidance = nextStep(lease, role, kp.publicKey())
 
   const act = async (a: Action) => {
     setError(null)
@@ -196,7 +197,7 @@ export function LeaseCard(props: { lease: Lease; role: Role; kp: Keypair; onChan
         </dl>
       </div>
 
-      <p className="next-step">{nextStep(lease, role, kp.publicKey())}</p>
+      {guidance && <p className="next-step">{guidance}</p>}
 
       <Schedule lease={lease} now={now} />
 

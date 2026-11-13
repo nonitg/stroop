@@ -17,6 +17,9 @@ export function statusBadge(l: Lease): { label: string; tone: Tone } {
       return { label: 'Ended early', tone: 'returned' }
     case 'Refunded':
       return { label: 'Refunded in full', tone: 'returned' }
+    default:
+      // Statuses added to the contract later still get a readable badge.
+      return { label: String(l.status), tone: 'waiting' }
   }
 }
 
@@ -51,5 +54,7 @@ export function nextStep(l: Lease, role: Role, me: string): string {
       return 'Ended early by agreement. Rent owed went to the landlord; the rest went back to the family.'
     case 'Refunded':
       return 'The full amount went back to the family.'
+    default:
+      return ''
   }
 }
