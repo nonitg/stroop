@@ -51,7 +51,7 @@ There is no admin withdrawal path. The resolver can only split a lease's funds b
 ### On-chain / off-chain split
 
 - **On-chain (Soroban):** custody of the reserve, the payout schedule, refund and termination rules, a public lease record anyone can verify.
-- **Off-chain:** the web app (static React; reads and writes through Stellar RPC and Horizon), the landlord's KYC and bank payout (anchor via SEP-10/SEP-24), and in production a scheduler that calls `release` on rent day.
+- **Off-chain:** the web app (static React; reads and writes through Stellar RPC and Horizon), the landlord's KYC and bank payout (anchor via SEP-10/SEP-24), and a keeper (`web/scripts/keeper.ts`) that calls `release` when rent comes due. It holds no special rights: the contract decides who gets paid and when.
 - **Demo clock:** one rent month = 60 seconds, so a full lease fits in a demo. Production uses 30-day periods.
 
 ## What's real and what's simulated
@@ -82,6 +82,9 @@ stellar contract build
 
 # Web app
 cd web && npm install && npm run dev
+
+# Rent-day scheduler: releases every lease's due rent (anyone can run it)
+cd web && bun scripts/keeper.ts 10
 ```
 
 ## Security notes
