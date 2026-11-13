@@ -236,13 +236,18 @@ export async function getLease(id: number): Promise<Lease> {
   }
 }
 
-/** Leases where `pub` is the payer or landlord, newest first (scans the most recent 40). */
-export async function leasesFor(pub: string): Promise<Lease[]> {
+/** The most recent `limit` leases, newest first. */
+export async function recentLeases(limit = 40): Promise<Lease[]> {
   const client = await reserveClient(null)
   const count = Number((await client.lease_count()).result)
-  const ids = Array.from({ length: Math.min(count, 40) }, (_, i) => count - 1 - i)
+  const ids = Array.from({ length: Math.min(count, limit) }, (_, i) => count - 1 - i)
   const leases = await Promise.all(ids.map((id) => getLease(id).catch(() => null)))
-  return leases.filter((l): l is Lease => !!l && (l.payer === pub || l.landlord === pub))
+  return leases.filter((l): l is Lease => !!l)
+}
+
+/** Leases where `pub` is the payer or landlord, newest first. */
+export async function leasesFor(pub: string): Promise<Lease[]> {
+  return (await recentLeases()).filter((l) => l.payer === pub || l.landlord === pub)
 }
 
 /** Rent periods the landlord could collect right now (mirrors the contract's rule). */
