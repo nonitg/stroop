@@ -5,6 +5,8 @@ export interface ToastInput {
   body?: string
   /** Transaction hash: adds a "View receipt" link to the public explorer. */
   hash?: string
+  /** Text to show in a selectable field, for when the clipboard is unavailable. */
+  copyText?: string
 }
 
 export const ToastContext = createContext<(t: ToastInput) => void>(() => {})

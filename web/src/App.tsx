@@ -16,7 +16,7 @@ const NAV: { view: Route['view']; href: string; label: string; short: string }[]
 export default function App() {
   const route = useRoute()
   return (
-    <ToastProvider>
+    <ToastProvider view={route.view}>
       <header className="topbar">
         <div className="topbar-inner">
           <a className="brand" href="#/family" aria-label="RentProof home">

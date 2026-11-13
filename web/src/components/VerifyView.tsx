@@ -1,9 +1,10 @@
 import { type FormEvent, useEffect, useState } from 'react'
-import { CircleAlert, FileSearch, Info, LoaderCircle, ShieldCheck } from 'lucide-react'
+import { CircleAlert, CirclePause, FileSearch, Info, LoaderCircle, ShieldCheck } from 'lucide-react'
 import { CONTRACTS, type Lease, explainError, explorer, fmtUSD, getLease, short } from '../stellar'
 import { useNow } from '../hooks'
-import { fmtDate } from '../leaseText'
+import { DISPUTE_NOTE, FEE_PCT, feeLine, fmtDate } from '../leaseText'
 import { ExplorerLink } from './ExplorerLink'
+import { Note } from './Note'
 import { Schedule } from './Schedule'
 import { StatusBadge } from './StatusBadge'
 
@@ -89,6 +90,7 @@ function LeaseProof({ id }: { id: number }) {
 
   const total = lease.rent * BigInt(lease.periods)
   const paid = lease.rent * BigInt(lease.paidPeriods)
+  const fee = feeLine(lease)
   return (
     <article className="proof" aria-labelledby="proof-title">
       <header className="proof-head">
@@ -116,15 +118,43 @@ function LeaseProof({ id }: { id: number }) {
         <section className="proof-amount" aria-label="Amount locked">
           <div className="proof-amount-top">
             <span className="label">Locked for this lease right now</span>
-            <StatusBadge lease={lease} />
+            <StatusBadge lease={lease} now={now} />
           </div>
           <p className="amount xl">
             {fmtUSD(lease.held)} <span className="unit">test USDC</span>
           </p>
           <p className="proof-terms">
-            {fmtUSD(total)} in total: {fmtUSD(lease.rent)} a month for {lease.periods} months. {fmtUSD(paid)} paid to the
-            landlord so far.
+            {fmtUSD(paid)} of {fmtUSD(total)} paid to the landlord so far.
           </p>
+          {lease.status === 'Disputed' && <Note tone="paused" Icon={CirclePause} {...DISPUTE_NOTE} />}
+          <dl className="terms">
+            <div>
+              <dt>Monthly rent</dt>
+              <dd>
+                {fmtUSD(lease.rent)} × {lease.periods} months
+              </dd>
+            </div>
+            <div>
+              <dt>Service fee ({FEE_PCT})</dt>
+              <dd>
+                {fee.amount}, {fee.state}
+              </dd>
+            </div>
+            <div>
+              <dt>Keys handed over</dt>
+              <dd>
+                {lease.handedOverAt > 0
+                  ? fmtDate(lease.handedOverAt)
+                  : lease.start > 0
+                    ? 'Confirmed at move-in'
+                    : 'Not yet'}
+              </dd>
+            </div>
+            <div>
+              <dt>Lease started</dt>
+              <dd>{lease.start > 0 ? fmtDate(lease.start) : 'Not yet'}</dd>
+            </div>
+          </dl>
         </section>
 
         <section aria-labelledby="proof-schedule">
@@ -137,7 +167,10 @@ function LeaseProof({ id }: { id: number }) {
           <ul className="checklist">
             <li>Rent is paid only to the landlord, one month at a time, never ahead of schedule.</li>
             <li>Nobody, including RentProof, can send this money anywhere else.</li>
-            <li>If move-in isn't confirmed by {fmtDate(lease.moveInBy)}, the money goes back to the family.</li>
+            <li>
+              If the keys aren't handed over and move-in isn't confirmed by {fmtDate(lease.moveInBy)}, the money goes back
+              to the family, fee included.
+            </li>
             <li>Ending early needs both sides to agree; unused rent goes back to the family.</li>
             <li>Disputes go to a neutral mediator, who can only split the money between the landlord and the family.</li>
           </ul>
@@ -156,6 +189,14 @@ function LeaseProof({ id }: { id: number }) {
               <dt>Paid by</dt>
               <dd>
                 <ExplorerLink href={explorer.account(lease.payer)} text={short(lease.payer)} />
+              </dd>
+            </div>
+            <div>
+              <dt>
+                Mediator <span className="dt-note">(can only split between landlord and family)</span>
+              </dt>
+              <dd>
+                <ExplorerLink href={explorer.account(lease.mediator)} text={short(lease.mediator)} />
               </dd>
             </div>
             <div>

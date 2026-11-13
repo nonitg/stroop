@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useRef, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { CircleCheck, ExternalLink, X } from 'lucide-react'
 import { explorer } from '../stellar'
 import { ToastContext, type ToastInput } from './useToast'
@@ -6,11 +6,16 @@ import { ToastContext, type ToastInput } from './useToast'
 type Toast = ToastInput & { id: number }
 
 const TOAST_MS = 10_000
+// Manual-copy toasts stay up longer: the person has to select the text.
+const COPY_TOAST_MS = 30_000
 
 // Confirmations after each action, with a link to the on-chain receipt.
-export function ToastProvider({ children }: { children: ReactNode }) {
+export function ToastProvider({ children, view }: { children: ReactNode; view: string }) {
   const [toasts, setToasts] = useState<Toast[]>([])
   const nextId = useRef(0)
+
+  // Confirmations belong to the screen they came from; switching views clears them.
+  useEffect(() => setToasts([]), [view])
 
   const dismiss = useCallback((id: number) => setToasts((all) => all.filter((t) => t.id !== id)), [])
 
@@ -18,7 +23,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     (t: ToastInput) => {
       const id = nextId.current++
       setToasts((all) => [...all.slice(-2), { ...t, id }])
-      setTimeout(() => dismiss(id), TOAST_MS)
+      setTimeout(() => dismiss(id), t.copyText ? COPY_TOAST_MS : TOAST_MS)
     },
     [dismiss],
   )
@@ -33,6 +38,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             <div className="toast-text">
               <strong>{t.title}</strong>
               {t.body && <span>{t.body}</span>}
+              {t.copyText && (
+                <input
+                  className="toast-copy"
+                  readOnly
+                  value={t.copyText}
+                  aria-label="Text to copy"
+                  onFocus={(e) => e.currentTarget.select()}
+                />
+              )}
               {t.hash && (
                 <a href={explorer.tx(t.hash)} target="_blank" rel="noreferrer">
                   View receipt on Stellar Expert <ExternalLink size={14} aria-hidden />

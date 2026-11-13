@@ -2,7 +2,7 @@ import { Check, CircleAlert, Copy, LoaderCircle } from 'lucide-react'
 import { type Role, explorer, short } from '../stellar'
 import type { Wallet } from '../hooks'
 import { ExplorerLink } from './ExplorerLink'
-import { useToast } from './useToast'
+import { useCopy } from './useCopy'
 
 // Friendly names for the step strings setupWallet reports.
 const SETUP_STEPS: { match: string; label: string; role?: Role }[] = [
@@ -81,8 +81,7 @@ function AccountSetup({ role, wallet }: { role: Role; wallet: Wallet }) {
 }
 
 function AccountSummary({ role, pub, balances }: { role: Role; pub: string; balances: { xlm: number; usdc: number } }) {
-  const toast = useToast()
-  const copy = () => navigator.clipboard?.writeText(pub).then(() => toast({ title: 'Account address copied' }))
+  const copy = useCopy()
   return (
     <section className="panel account" aria-label={ROLE_COPY[role].label}>
       <div className="account-balance">
@@ -95,7 +94,7 @@ function AccountSummary({ role, pub, balances }: { role: Role; pub: string; bala
       <div className="account-meta">
         <div className="account-links">
           <ExplorerLink href={explorer.account(pub)} text={short(pub)} />
-          <button className="btn quiet small" onClick={copy}>
+          <button className="btn quiet small" onClick={() => copy(pub, { title: 'Account address copied' })}>
             <Copy size={15} aria-hidden /> Copy address
           </button>
         </div>

@@ -1,7 +1,8 @@
 import { type FormEvent, useState } from 'react'
 import type { Keypair } from '@stellar/stellar-sdk'
 import { ChevronDown, CircleAlert, LoaderCircle, LockKeyhole, UserRound } from 'lucide-react'
-import { explainError, fmtUSD, getKeypair, logTx, reserve, setupWallet, toUnits } from '../stellar'
+import { explainError, feeFor, fmtUSD, getKeypair, logTx, reserve, setupWallet, toUnits } from '../stellar'
+import { FEE_PCT } from '../leaseText'
 import { useLeases, useWallet } from '../hooks'
 import { AccountPanel } from './Account'
 import { LeaseList } from './LeaseCard'
@@ -36,8 +37,11 @@ function NewLeaseForm({ kp, collapsed, onCreated }: { kp: Keypair; collapsed: bo
   const [busy, setBusy] = useState<'landlord' | 'lock' | null>(null)
   const [error, setError] = useState<string | null>(null)
   // Guard against Infinity/NaN from the number inputs so formatting never throws.
-  const dollars = (n: number) => fmtUSD(toUnits(Number.isFinite(n) ? n : 0))
-  const total = dollars(rent * months)
+  const units = (n: number) => toUnits(Number.isFinite(n) ? n : 0)
+  const rentTotal = units(rent * months)
+  // The contract locks a service fee on top of the rent; it's only charged at move-in.
+  const fee = feeFor(rentTotal)
+  const total = fmtUSD(rentTotal + fee)
   const valid = !!landlord && rent > 0 && months >= 1
 
   const pickDemoLandlord = async () => {
@@ -117,9 +121,21 @@ function NewLeaseForm({ kp, collapsed, onCreated }: { kp: Keypair; collapsed: bo
           <span className="amount">{total}</span>
           <span className="unit">test USDC</span>
         </div>
-        <p>
-          {dollars(rent)} a month goes to the landlord, never early. Demo speed: 1 month = 1 minute. If
-          move-in isn't confirmed within 30 minutes, you can take everything back.
+        <dl className="breakdown">
+          <div>
+            <dt>Rent</dt>
+            <dd>{fmtUSD(rentTotal)}</dd>
+            <dd className="breakdown-note">{fmtUSD(units(rent))} a month goes to the landlord, never early.</dd>
+          </div>
+          <div>
+            <dt>Service fee ({FEE_PCT})</dt>
+            <dd>{fmtUSD(fee)}</dd>
+            <dd className="breakdown-note">Charged only after you move in; refunded if you don't.</dd>
+          </div>
+        </dl>
+        <p className="demo-note">
+          Demo speed: 1 month = 1 minute. If the keys aren't handed over within 30 minutes, you can take everything
+          back.
         </p>
       </div>
       <button className="btn primary wide" type="submit" disabled={!!busy || !valid} aria-busy={busy === 'lock'}>

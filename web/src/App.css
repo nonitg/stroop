@@ -631,6 +631,15 @@ main {
   color: #fff;
 }
 
+.badge.paused {
+  background: var(--marigold);
+  color: var(--marigold-ink);
+}
+
+.badge.paused .badge-dot {
+  background: var(--marigold-ink);
+}
+
 .badge.returned {
   background: var(--stone-tint);
   color: var(--ink-2);
@@ -638,9 +647,7 @@ main {
 
 .lease-figures {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--space-4) var(--space-6);
-  align-items: end;
+  gap: var(--space-4);
 }
 
 .held .amount {
@@ -649,25 +656,26 @@ main {
   font-size: var(--text-2xl);
 }
 
+/* Supporting numbers sit in one quiet row under the locked amount. */
 .facts {
   margin: 0;
   display: grid;
-  gap: 10px;
-  min-width: 200px;
-}
-
-.facts div {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-5);
-  font-size: var(--text-sm);
-  padding-bottom: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
 }
 
-.facts div:last-child {
-  border-bottom: 0;
-  padding-bottom: 0;
+.facts div {
+  padding: 12px 16px;
+  font-size: var(--text-sm);
+}
+
+.facts div:first-child {
+  padding-left: 0;
+}
+
+.facts div + div {
+  border-left: 1px solid var(--line);
 }
 
 .facts dt {
@@ -675,9 +683,17 @@ main {
 }
 
 .facts dd {
-  margin: 0;
+  margin: 2px 0 0;
   font-weight: 600;
+  font-size: var(--text-base);
   font-variant-numeric: tabular-nums;
+}
+
+.fact-note {
+  display: block;
+  font-weight: 400;
+  font-size: var(--text-xs);
+  color: var(--ink-3);
 }
 
 .next-step {
@@ -687,6 +703,12 @@ main {
 }
 
 /* ---------- Schedule tiles ---------- */
+
+/* On the lease card the schedule is the record below today's actions. */
+.lease .schedule {
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
 
 .tiles {
   list-style: none;
@@ -817,38 +839,56 @@ main {
   transition: width 1s linear;
 }
 
-.blocked {
+.note {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 14px;
   align-items: start;
   padding: 16px 12px 16px 16px;
   border-radius: var(--radius-lg);
-  background: var(--spruce-tint);
-  border: 1px solid var(--spruce-tint-2);
   animation: arrive 420ms var(--ease-out);
 }
 
-.blocked-icon {
-  color: #fff;
-  background: var(--spruce);
+.note-icon {
   border-radius: 12px;
   padding: 8px;
   width: 44px;
   height: 44px;
 }
 
-.blocked strong {
+.note strong {
   display: block;
   font-size: var(--text-md);
   color: var(--ink);
   line-height: 1.3;
 }
 
-.blocked p {
+.note p {
   margin-top: 2px;
   color: var(--ink-2);
   text-wrap: balance;
+}
+
+/* The contract refused something on the person's behalf: reassurance, not error. */
+.note.protect {
+  background: var(--spruce-tint);
+  border: 1px solid var(--spruce-tint-2);
+}
+
+.note.protect .note-icon {
+  color: #fff;
+  background: var(--spruce);
+}
+
+/* Money is frozen while a person decides: attention, not alarm. */
+.note.paused {
+  background: var(--marigold-tint);
+  border: 1px solid #f1d9a2;
+}
+
+.note.paused .note-icon {
+  color: var(--marigold-ink);
+  background: var(--marigold);
 }
 
 @keyframes arrive {
@@ -873,6 +913,11 @@ main {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+/* With no louder action beside them, text buttons line up with the card's text. */
+.actions > .actions-quiet:first-child {
+  margin-left: -12px;
 }
 
 .lease .alert {
@@ -1089,9 +1134,43 @@ main {
   color: var(--spruce);
 }
 
-.lock-summary p {
-  color: var(--ink-2);
+.breakdown {
+  margin: var(--space-2) 0 0;
+  display: grid;
+  gap: 10px;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--spruce-tint-2);
+}
+
+.breakdown div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0 var(--space-4);
   font-size: var(--text-sm);
+}
+
+.breakdown dt {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.breakdown dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.breakdown .breakdown-note {
+  grid-column: 1 / -1;
+  font-weight: 400;
+  text-align: left;
+  color: var(--ink-2);
+}
+
+.demo-note {
+  color: var(--ink-3);
+  font-size: var(--text-xs);
 }
 
 .new-lease summary {
@@ -1247,6 +1326,21 @@ details.new-lease {
   margin-top: 4px;
   font-weight: 600;
   width: fit-content;
+}
+
+.toast-copy {
+  margin-top: 6px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1.5px solid var(--line-input);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--ink);
+  background: var(--surface-sunk);
+  user-select: all;
+  -webkit-user-select: all;
 }
 
 .toast .icon-btn {
@@ -1454,6 +1548,40 @@ details.new-lease {
   font-size: var(--text-md);
 }
 
+.terms {
+  margin: var(--space-5) 0 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-6);
+}
+
+.terms div {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+
+.terms dt {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+.terms dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.proof-amount .note {
+  margin-top: var(--space-4);
+}
+
+.dt-note {
+  display: block;
+  font-weight: 400;
+  font-size: var(--text-xs);
+}
+
 .checklist {
   list-style: none;
   padding: 0;
@@ -1500,7 +1628,7 @@ details.new-lease {
 
 .parties div {
   display: grid;
-  grid-template-columns: 150px minmax(0, 1fr);
+  grid-template-columns: 200px minmax(0, 1fr);
   gap: var(--space-4);
   align-items: center;
   padding: 6px 0;
@@ -1611,11 +1739,22 @@ details.new-lease {
   .lease {
     gap: 18px;
   }
-  .lease-figures {
+  .facts {
     grid-template-columns: minmax(0, 1fr);
   }
-  .facts {
-    min-width: 0;
+  .facts div {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-4);
+    padding: 10px 0;
+  }
+  .facts div + div {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+  .facts dd {
+    text-align: right;
   }
   .held .amount {
     font-size: 2.25rem;
@@ -1636,6 +1775,10 @@ details.new-lease {
   }
   .actions-quiet {
     flex: 1 1 100%;
+    margin-left: -12px;
+  }
+  .actions-quiet .btn {
+    flex: 0 0 auto;
   }
   .lease-links {
     margin-left: -12px;
@@ -1694,6 +1837,9 @@ details.new-lease {
   }
   .proof-foot {
     padding: 18px 20px;
+  }
+  .terms {
+    grid-template-columns: minmax(0, 1fr);
   }
   .parties div {
     grid-template-columns: minmax(0, 1fr);
