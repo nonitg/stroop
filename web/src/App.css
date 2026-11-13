@@ -848,6 +848,7 @@ main {
 .blocked p {
   margin-top: 2px;
   color: var(--ink-2);
+  text-wrap: balance;
 }
 
 @keyframes arrive {
@@ -867,12 +868,11 @@ main {
   gap: 10px;
 }
 
-/* Reversible, low-stakes steps sit apart from the main action. */
+/* Low-stakes steps come last, as text buttons. */
 .actions-quiet {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-left: auto;
 }
 
 .lease .alert {
@@ -1636,7 +1636,6 @@ details.new-lease {
   }
   .actions-quiet {
     flex: 1 1 100%;
-    margin-left: 0;
   }
   .lease-links {
     margin-left: -12px;
@@ -1678,6 +1677,10 @@ details.new-lease {
   }
   .proof-head h1 {
     font-size: var(--text-lg);
+  }
+  .amount.xl .unit {
+    display: block;
+    margin: var(--space-2) 0 0;
   }
   .seal {
     width: 48px;
