@@ -1,0 +1,4 @@
+:root { font-family: system-ui, -apple-system, sans-serif; color: #1b1b1b; background: #f7f5f0; line-height: 1.5; }
+body { margin: 0; background: #f7f5f0; }
+h1 { font-size: 1.8rem; line-height: 1.2; margin: 0 0 8px; }
+h3 { margin: 0 0 8px; }
