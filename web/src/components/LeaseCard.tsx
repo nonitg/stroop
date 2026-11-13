@@ -48,7 +48,8 @@ export function LeaseCard(props: { lease: Lease; role: Role; kp: Keypair; onChan
   const copy = useCopy()
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [blocked, setBlocked] = useState(false)
+  // Month count when an early withdrawal was refused; the note goes away once rent moves on.
+  const [blockedAt, setBlockedAt] = useState<number | null>(null)
   const [cashout, setCashout] = useState(false)
   const due = periodsDue(lease, now)
   const next = secsToNextRelease(lease, now)
@@ -60,7 +61,7 @@ export function LeaseCard(props: { lease: Lease; role: Role; kp: Keypair; onChan
 
   const act = async (a: Action) => {
     setError(null)
-    setBlocked(false)
+    setBlockedAt(null)
     setBusy(a.id)
     try {
       const { hash } = await a.run()
@@ -68,7 +69,7 @@ export function LeaseCard(props: { lease: Lease; role: Role; kp: Keypair; onChan
       toast({ title: a.done, body: a.doneBody, hash })
       await onChange()
     } catch (e) {
-      if (a.id === 'early' && isNothingDue(e)) setBlocked(true)
+      if (a.id === 'early' && isNothingDue(e)) setBlockedAt(lease.paidPeriods)
       else setError(explainError(e))
     } finally {
       setBusy(null)
@@ -128,13 +129,13 @@ export function LeaseCard(props: { lease: Lease; role: Role; kp: Keypair; onChan
         </Countdown>
       )}
 
-      {blocked && due === 0 && (
+      {blockedAt === lease.paidPeriods && due === 0 && (
         <Note
           tone="protect"
           Icon={ShieldCheck}
           title="Blocked by the contract"
           body="No rent is due yet, so the contract refused to pay out. Rent only moves on schedule, one month at a time, and only to you."
-          onDismiss={() => setBlocked(false)}
+          onDismiss={() => setBlockedAt(null)}
         />
       )}
 
