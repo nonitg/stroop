@@ -20,6 +20,19 @@ First customer: international students (about 690,000 study-permit holders in Ca
 
 The test USDC is a classic Stellar asset (`USDC:GDLAVU5VJNJJFAL7TDMPYASQ6SFTENCCUNZBCQU6MC62PJ3CF3E2MDFV`) issued by us for the demo. It has no value, and anyone can mint it from the faucet. The rent contract's token is fixed at deployment (so a lease can't be "funded" with a look-alike token); on mainnet it is deployed with Circle's USDC.
 
+## Try it in 2 minutes
+
+No wallet extension needed; everything runs on Testnet with play money.
+
+1. Open the app → **Student & family** → *Create demo account* (gets 20,000 test USDC).
+2. *Use a demo landlord* → *Lock $12,120* (12 × $1,000 rent + 1% fee, charged only after move-in).
+3. **Landlord** tab → open the lease's proof page (what a landlord sees from the tenant's link) → *Accept lease*.
+4. **Student & family** → *Confirm move-in*: month 1 is paid and the fee is collected.
+5. **Landlord** → *Try to withdraw early*: **blocked by the contract**. Wait a minute (demo clock: 1 month = 1 minute) → *Collect rent*.
+6. Optional: *Mark keys handed over* / *Raise a dispute* / *Propose ending lease early* / *Cash out* (real SEP-10 + SEP-24 on SDF's test anchor).
+
+Every action links to its transaction on Stellar Expert.
+
 ## How it works
 
 ```
