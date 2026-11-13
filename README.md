@@ -14,11 +14,11 @@ First customer: international students (about 690,000 study-permit holders in Ca
 
 | Contract | ID |
 | --- | --- |
-| Rent reserve (Soroban) | [`CANRHQV256NWBG4DJK7SAQYLOXPMVMML3DGC2ARLCQCXDMNXQ27TITH5`](https://stellar.expert/explorer/testnet/contract/CANRHQV256NWBG4DJK7SAQYLOXPMVMML3DGC2ARLCQCXDMNXQ27TITH5) |
+| Rent reserve (Soroban) | [`CAAV5OIX7LCWNOLNIBQODIDNQ3E5GTU6H6PYU5PXAHIDZL7WH6Q4JBA6`](https://stellar.expert/explorer/testnet/contract/CAAV5OIX7LCWNOLNIBQODIDNQ3E5GTU6H6PYU5PXAHIDZL7WH6Q4JBA6) |
 | Test USDC (Stellar Asset Contract) | [`CBPPI4PD6JOCLHDKRQ4ROBL5Z2YRIATOG4A5K6MPLUERBUXPQHXHU5OD`](https://stellar.expert/explorer/testnet/contract/CBPPI4PD6JOCLHDKRQ4ROBL5Z2YRIATOG4A5K6MPLUERBUXPQHXHU5OD) |
 | Test USDC faucet (SAC admin) | [`CCYT3OCJ4N5TJSXULBW5HBHDNJSJ6NNXRVEPSBO72DEA6E3YU4LB5BYH`](https://stellar.expert/explorer/testnet/contract/CCYT3OCJ4N5TJSXULBW5HBHDNJSJ6NNXRVEPSBO72DEA6E3YU4LB5BYH) |
 
-The test USDC is a classic Stellar asset (`USDC:GDLAVU5VJNJJFAL7TDMPYASQ6SFTENCCUNZBCQU6MC62PJ3CF3E2MDFV`) issued by us for the demo. It has no value. The rent contract accepts any SEP-41 token, so mainnet uses Circle's USDC with no code changes.
+The test USDC is a classic Stellar asset (`USDC:GDLAVU5VJNJJFAL7TDMPYASQ6SFTENCCUNZBCQU6MC62PJ3CF3E2MDFV`) issued by us for the demo. It has no value, and anyone can mint it from the faucet. The rent contract's token is fixed at deployment (so a lease can't be "funded" with a look-alike token); on mainnet it is deployed with Circle's USDC.
 
 ## How it works
 
@@ -38,15 +38,18 @@ Family (abroad)                 Rent reserve contract                 Landlord (
 
 | Rule | Function | Who must sign |
 | --- | --- | --- |
-| Lock `rent × months` for a named landlord | `create` | payer |
-| Landlord commits to the lease (payer can cancel freely before this) | `accept` | landlord |
-| Move-in starts the schedule and pays month one | `move_in` | payer |
-| Pay every month that has come due, only to the landlord, never early or twice | `release` | anyone (a scheduler in production) |
-| Full refund if move-in isn't confirmed by the deadline | `reclaim` | payer |
-| End early: one side proposes, the other agrees; due rent paid, rest refunded | `end_early` | payer and landlord |
-| Dispute: a neutral resolver splits locked funds between the two parties only | `resolve` | resolver |
+| Lock `rent × months` + a 1% service fee for a named landlord and mediator | `create` | payer |
+| Landlord commits to the terms and mediator (payer can cancel freely before this) | `accept` | landlord |
+| Landlord records the keys as handed over; payer can no longer reclaim | `hand_over` | landlord |
+| Move-in starts the schedule, pays month one, collects the fee | `move_in` | payer |
+| Pay every month that has come due, only to the landlord, never early or twice; also starts a handed-over lease once the dispute window passes quietly | `release` | anyone (the keeper) |
+| Full refund, fee included, if the keys weren't handed over by the deadline (fake listing) | `reclaim` | payer |
+| End early: one side proposes, the other agrees before it lapses; due rent paid, rest refunded | `end_early` / `cancel_end` | payer and landlord |
+| Pause payouts and ask the mediator | `dispute` | payer or landlord |
+| Mediator splits the locked rent between the two parties only (fee refunded if never moved in) | `resolve` | the lease's mediator |
+| Landlord collects rent that couldn't be delivered earlier (e.g. a missing trustline) | `claim` | landlord |
 
-There is no admin withdrawal path. The resolver can only split a lease's funds between its payer and landlord.
+There is no admin withdrawal path. The operator can't touch a lease's funds; the mediator is named per lease, accepted by the landlord, can act only after a dispute, and can only split between payer and landlord. A landlord who can't receive funds never blocks the payer's refund: their share is recorded as owed instead. Terms are bounded (1–24 months, periods of 1 minute to 31 days, fee ≤ 5%), and every state change emits an event.
 
 ### On-chain / off-chain split
 
@@ -58,7 +61,7 @@ There is no admin withdrawal path. The resolver can only split a lease's funds b
 
 | Piece | Status |
 | --- | --- |
-| Rent reserve contract, all rules above | Real, deployed on Testnet, 8 unit tests + scripted end-to-end run |
+| Rent reserve contract, all rules above | Real, deployed on Testnet, 16 unit tests + scripted end-to-end run |
 | USDC movement | Real Testnet transfers of our test USDC through its Stellar Asset Contract |
 | Landlord verification page | Real, reads contract state live |
 | Anchor cash-out | SEP-1/SEP-10/SEP-24 calls are real, against SDF's reference anchor (`testanchor.stellar.org`); no money moves on Testnet |
@@ -89,9 +92,14 @@ cd web && bun scripts/keeper.ts 10
 
 ## Security notes
 
-- Every state change checks the right signer with `require_auth`; payouts can only go to the lease's landlord or back to its payer.
-- Integer math is checked; terms are validated (positive rent, 1–24 months, landlord ≠ payer).
+- Every state change checks the right signer with `require_auth`; payouts can only go to the lease's landlord or back to its payer (plus the fee to the treasury at move-in).
+- The reserve token is fixed at deployment; terms are bounded; integer math is checked.
+- The mediator is per lease, needs a dispute first, and can only split between the two parties.
+- Payouts to the landlord can't block refunds (`try_transfer` falls back to a claimable balance).
+- Early-end proposals lapse after one period and can be withdrawn.
 - Lease storage TTL is extended on every access so records don't expire mid-lease.
+- SEP-10: the challenge is validated (server signature, home and web-auth domains, client account) before signing; the SEP-24 form only opens on the anchor's https host, with no `opener` back into the app.
+- The contract was reviewed internally against fake tokens, griefing, stale proposals, blocked refunds and resolver abuse; each finding has a regression test.
 - Demo wallets hold Testnet play money only and live in the browser's local storage. Don't reuse them.
 - Before mainnet: an independent audit, KYC on both sides through the anchor and onboarding partner, and a legal review of holding prepaid rent under provincial tenancy law.
 

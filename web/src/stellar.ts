@@ -28,25 +28,36 @@ export const DEMO_MOVE_IN_WINDOW_SECS = 30 * 60
 
 export type Role = 'family' | 'landlord'
 
-export const STATUS = ['Funded', 'Accepted', 'Active', 'Completed', 'Ended', 'Refunded'] as const
+export const STATUS = ['Funded', 'Accepted', 'Active', 'Completed', 'Ended', 'Refunded', 'Disputed'] as const
 export type StatusName = (typeof STATUS)[number]
 
 export interface Lease {
   id: number
   payer: string
   landlord: string
-  token: string
+  /** Neutral party named on the lease; can only split a disputed lease between the two sides. */
+  mediator: string
   rent: bigint
   periods: number
   periodSecs: number
   createdAt: number
   moveInBy: number
+  /** When the landlord marked the keys handed over; 0 if not yet. */
+  handedOverAt: number
   start: number
   paidPeriods: number
   held: bigint
+  /** 1% service fee: held until move-in, refunded if move-in never happens. */
+  fee: bigint
+  /** Rent the landlord couldn't receive yet; claimable. */
+  landlordOwed: bigint
   status: StatusName
   endProposedBy?: string
+  endProposedAt: number
 }
+
+/** Service fee the contract adds on top of the reserve (charged only at move-in). */
+export const feeFor = (reserveUnits: bigint) => (reserveUnits * BigInt(ids.feeBps)) / 10_000n
 
 const horizon = new Horizon.Server(NET.horizonUrl)
 
@@ -166,6 +177,7 @@ function reserveClient(kp?: Keypair | null): Promise<any> {
 }
 
 const ERRORS: Record<number, string> = {
+  1: 'The contract is misconfigured.',
   2: 'Those lease terms are not valid.',
   3: 'Lease not found.',
   4: 'That action is not allowed at this stage of the lease.',
@@ -174,6 +186,8 @@ const ERRORS: Record<number, string> = {
   7: 'The move-in window is still open, so the reserve stays locked.',
   8: 'The move-in deadline has passed.',
   9: 'Invalid amount.',
+  10: 'The landlord has marked the keys as handed over, so the reserve can no longer be reclaimed. Raise a dispute instead.',
+  11: 'Only the side that proposed ending early can withdraw the proposal.',
 }
 
 export function explainError(e: unknown): string {
@@ -202,7 +216,7 @@ export const reserve = {
     send<bigint>(kp, 'create', {
       payer: kp.publicKey(),
       landlord,
-      token: ids.usdcSac,
+      mediator: ids.mediator,
       rent: toUnits(rentDollars),
       periods: months,
       period_secs: BigInt(DEMO_PERIOD_SECS),
@@ -213,26 +227,36 @@ export const reserve = {
   release: (kp: Keypair, id: number) => send<bigint>(kp, 'release', { id: BigInt(id) }),
   reclaim: (kp: Keypair, id: number) => send<bigint>(kp, 'reclaim', { id: BigInt(id) }),
   endEarly: (kp: Keypair, id: number) => send<bigint>(kp, 'end_early', { id: BigInt(id), caller: kp.publicKey() }),
+  cancelEnd: (kp: Keypair, id: number) => send<void>(kp, 'cancel_end', { id: BigInt(id), caller: kp.publicKey() }),
+  handOver: (kp: Keypair, id: number) => send<void>(kp, 'hand_over', { id: BigInt(id) }),
+  dispute: (kp: Keypair, id: number) => send<void>(kp, 'dispute', { id: BigInt(id), caller: kp.publicKey() }),
+  claim: (kp: Keypair, id: number) => send<bigint>(kp, 'claim', { id: BigInt(id) }),
 }
 
 export async function getLease(id: number): Promise<Lease> {
   const client = await reserveClient(null)
   const raw = (await client.get_lease({ id: BigInt(id) })).result
+  // A missing lease comes back as a contract error from simulation, not a value.
+  if (!raw || typeof raw !== 'object' || !('payer' in raw)) throw new Error(`Lease #${id} was not found on Stellar.`)
   return {
     id,
     payer: raw.payer,
     landlord: raw.landlord,
-    token: raw.token,
+    mediator: raw.mediator,
     rent: BigInt(raw.rent),
     periods: Number(raw.periods),
     periodSecs: Number(raw.period_secs),
     createdAt: Number(raw.created_at),
     moveInBy: Number(raw.move_in_by),
+    handedOverAt: Number(raw.handed_over_at),
     start: Number(raw.start),
     paidPeriods: Number(raw.paid_periods),
     held: BigInt(raw.held),
+    fee: BigInt(raw.fee),
+    landlordOwed: BigInt(raw.landlord_owed),
     status: STATUS[Number(raw.status)] ?? 'Funded',
     endProposedBy: raw.end_proposed_by ?? undefined,
+    endProposedAt: Number(raw.end_proposed_at),
   }
 }
 
@@ -250,12 +274,26 @@ export async function leasesFor(pub: string): Promise<Lease[]> {
   return (await recentLeases()).filter((l) => l.payer === pub || l.landlord === pub)
 }
 
+// Mirrors the contract: time the student has to dispute after the keys are handed
+// over, and how long an early-end proposal stays open.
+export const disputeWindowSecs = (l: Lease) => Math.min(l.periodSecs, 3 * 24 * 3600)
+export const proposalWindowSecs = (l: Lease) => Math.min(l.periodSecs, 7 * 24 * 3600)
+
+/** Keys handed over and the dispute window passed quietly: the lease starts on the next release. */
+export const startsOnRelease = (l: Lease, nowSecs = Date.now() / 1000) =>
+  l.status === 'Accepted' && l.handedOverAt > 0 && nowSecs >= l.handedOverAt + disputeWindowSecs(l)
+
 /** Rent periods the landlord could collect right now (mirrors the contract's rule). */
 export function periodsDue(l: Lease, nowSecs = Date.now() / 1000): number {
-  if (l.status !== 'Active') return 0
-  const due = Math.min(l.periods, 1 + Math.floor((nowSecs - l.start) / l.periodSecs))
+  const start = l.status === 'Active' ? l.start : startsOnRelease(l, nowSecs) ? l.handedOverAt : null
+  if (start === null) return 0
+  const due = Math.min(l.periods, 1 + Math.floor((nowSecs - start) / l.periodSecs))
   return Math.max(0, due - l.paidPeriods)
 }
+
+/** Whether the other side's early-end proposal is still open for agreement. */
+export const proposalOpen = (l: Lease, nowSecs = Date.now() / 1000) =>
+  !!l.endProposedBy && nowSecs <= l.endProposedAt + proposalWindowSecs(l)
 
 /** Seconds until the next period unlocks, or null when nothing more will unlock. */
 export function secsToNextRelease(l: Lease, nowSecs = Date.now() / 1000): number | null {

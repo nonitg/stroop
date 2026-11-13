@@ -26,8 +26,15 @@ export async function discoverAnchor(domain = ANCHOR_DOMAIN): Promise<AnchorInfo
 export async function authenticate(kp: Keypair, anchor: AnchorInfo, domain = ANCHOR_DOMAIN): Promise<string> {
   const challenge = await (await fetch(`${anchor.webAuth}?account=${kp.publicKey()}`)).json()
   if (!challenge.transaction) throw new Error(challenge.error ?? 'Anchor did not return a challenge')
-  // Refuse to sign anything that isn't a genuine challenge from this anchor.
-  WebAuth.readChallengeTx(challenge.transaction, anchor.signingKey, PASSPHRASE, domain, domain)
+  // Refuse to sign anything that isn't a genuine challenge from this anchor, for this account.
+  const { clientAccountID } = WebAuth.readChallengeTx(
+    challenge.transaction,
+    anchor.signingKey,
+    PASSPHRASE,
+    domain,
+    new URL(anchor.webAuth).host,
+  )
+  if (clientAccountID !== kp.publicKey()) throw new Error('Anchor challenge was issued for a different account')
   const tx = TransactionBuilder.fromXDR(challenge.transaction, PASSPHRASE)
   tx.sign(kp)
   const res = await fetch(anchor.webAuth, {
@@ -59,7 +66,11 @@ export async function startWithdrawal(
   })
   const body = await res.json()
   if (!body.url) throw new Error(body.error ?? 'Anchor could not start the withdrawal')
-  return { id: body.id, url: body.url }
+  // Only ever open an https page on the anchor's own SEP-24 host.
+  const url = new URL(body.url)
+  const allowed = new Set([new URL(anchor.sep24).hostname, `anchor-ref-ui-${new URL(anchor.sep24).hostname}`])
+  if (url.protocol !== 'https:' || !allowed.has(url.hostname)) throw new Error('Anchor returned an unexpected form URL')
+  return { id: body.id, url: url.toString() }
 }
 
 export async function withdrawalStatus(anchor: AnchorInfo, token: string, id: string): Promise<string> {

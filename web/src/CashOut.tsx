@@ -24,6 +24,7 @@ export function CashOut({ onClose, amount }: { onClose: () => void; amount: bigi
     if (!kp) return
     // Open the window during the click so browsers don't block it as a popup.
     const win = window.open('', 'rentproof-anchor', 'width=480,height=760')
+    if (win) win.opener = null // the anchor page gets no handle back into this app
     setPhase('working')
     setError('')
     try {
