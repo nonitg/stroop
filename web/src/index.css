@@ -1,75 +1,91 @@
-/* RentProof design tokens.
-   Spruce = money that's safe and settled; marigold = something needs attention now.
-   Cool mineral paper keeps it calm and bank-like without the cream-and-clay look. */
+/* RentProof design tokens: "glass ledger".
+   One precise typeface, hairlines instead of boxes, and one signature object: the reserve,
+   drawn as a row of months. Spruce = settled and safe; amber = due now; glass = locked and visible. */
 :root {
   color-scheme: light;
 
   /* Color */
-  --paper: #eef2f0;
+  --canvas: #f3f5f4;
   --surface: #ffffff;
-  --surface-sunk: #f5f8f6;
-  --ink: #13261f;
-  --ink-2: #3c4f46;
-  --ink-3: #56675f;
-  --line: #d5dfda;
-  --line-strong: #a9bab2;
-  --line-input: #7d9188;
-  --spruce: #1d5a48;
-  --spruce-hover: #164a3b;
-  --spruce-press: #10392d;
-  --spruce-tint: #e0ede6;
-  --spruce-tint-2: #c3dacf;
-  --spruce-hatch: #cfe2d8;
-  --marigold: #f0b23e;
-  --marigold-ink: #573700;
-  --marigold-tint: #fcf0d4;
-  --brick: #a8261d;
-  --brick-tint: #fbe9e6;
-  --stone-tint: #e8ecea;
+  --surface-2: #f8faf9;
+  --surface-3: #eef2f0;
+  --ink: #0c1a15;
+  --ink-2: #3d4b45;
+  --ink-3: #5f6e68;
+  --line: #e2e7e5;
+  --line-2: #cdd5d2;
+  --line-3: #9aa8a2;
+
+  --spruce: #12543f;
+  --spruce-hover: #0e4734;
+  --spruce-press: #0a3829;
+  --spruce-deep: #0a2f24;
+  --spruce-night: #071f18;
+  --spruce-tint: #e3efe9;
+  --spruce-tint-2: #cfe3d9;
+  --mint: #5ee0a8;
+
+  --amber: #f0b23e;
+  --amber-ink: #4a3000;
+  --amber-tint: #fdf3dc;
+  --brick: #b42318;
+  --brick-tint: #fdeeec;
   --selection: #f7d68c;
 
   /* Type */
-  --font-display: 'Fraunces', 'Iowan Old Style', Georgia, serif;
-  --font-body: 'Lexend', system-ui, -apple-system, sans-serif;
-  --font-mono: 'Atkinson Hyperlegible Mono', ui-monospace, 'SF Mono', Menlo, monospace;
-  --text-xs: 0.8125rem;
-  --text-sm: 0.9375rem;
-  --text-base: 1rem;
-  --text-md: 1.125rem;
-  --text-lg: 1.375rem;
-  --text-xl: 1.75rem;
-  --text-2xl: 2.625rem;
-  --text-3xl: clamp(2.75rem, 2rem + 3vw, 4rem);
-  --text-display: clamp(2.25rem, 1.6rem + 2vw, 3rem);
+  --font: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --t-xs: 0.75rem;
+  --t-sm: 0.8125rem;
+  --t-base: 0.9375rem;
+  --t-md: 1rem;
+  --t-lg: 1.125rem;
+  --t-xl: 1.375rem;
+  --t-2xl: 1.75rem;
+  --t-3xl: 2.5rem;
+  --t-hero: clamp(2.5rem, 1.6rem + 3.4vw, 4rem);
 
   /* Space (4px base) */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 24px;
-  --space-6: 32px;
-  --space-7: 48px;
-  --space-8: 64px;
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-7: 32px;
+  --s-8: 48px;
+  --s-9: 64px;
+  --s-10: 96px;
 
   /* Shape and depth */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-xl: 22px;
-  --radius-pill: 999px;
-  --shadow-panel: 0 1px 2px rgb(19 38 31 / 0.05), 0 10px 28px -14px rgb(19 38 31 / 0.18);
-  --shadow-float: 0 18px 40px -12px rgb(19 38 31 / 0.32), 0 2px 6px rgb(19 38 31 / 0.08);
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 20px;
+  --r-pill: 999px;
+  --shadow-1: 0 1px 0 rgb(12 26 21 / 0.03), 0 1px 2px rgb(12 26 21 / 0.06);
+  --shadow-2: 0 1px 1px rgb(12 26 21 / 0.03), 0 2px 4px -2px rgb(12 26 21 / 0.05), 0 12px 32px -16px rgb(12 26 21 / 0.14);
+  --shadow-3: 0 2px 6px rgb(12 26 21 / 0.06), 0 24px 48px -16px rgb(12 26 21 / 0.28);
+  --ring: 0 0 0 3px rgb(18 84 63 / 0.18);
 
-  font-family: var(--font-body);
+  /* Motion: fast in, gentle settle. Exits are quicker than entrances. */
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --d-1: 120ms;
+  --d-2: 200ms;
+  --d-3: 320ms;
+  --d-4: 560ms;
+
+  font-family: var(--font);
   font-size: 100%;
-  line-height: 1.55;
+  line-height: 1.5;
+  font-feature-settings: 'ss01' on;
   color: var(--ink);
-  background: var(--paper);
+  background: var(--canvas);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  scrollbar-color: var(--line-strong) var(--paper);
+  scrollbar-color: var(--line-2) var(--canvas);
 }
 
 *,
@@ -81,11 +97,12 @@
 body {
   margin: 0;
   min-width: 320px;
-  background: var(--paper);
+  background: var(--canvas);
 }
 
 #root {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
 }
@@ -94,7 +111,10 @@ h1,
 h2,
 h3,
 h4,
-p {
+p,
+dl,
+dd,
+figure {
   margin: 0;
 }
 
@@ -102,6 +122,7 @@ h1,
 h2,
 h3 {
   text-wrap: balance;
+  font-weight: 600;
 }
 
 p {
@@ -119,14 +140,10 @@ a {
   text-underline-offset: 3px;
 }
 
-a:hover {
-  text-decoration-thickness: 2px;
-}
-
 :focus-visible {
-  outline: 3px solid var(--spruce);
+  outline: 2px solid var(--spruce);
   outline-offset: 2px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--r-sm);
 }
 
 input,
@@ -134,6 +151,10 @@ button,
 summary {
   font: inherit;
   color: inherit;
+}
+
+button {
+  cursor: pointer;
 }
 
 .sr-only {
@@ -148,6 +169,29 @@ summary {
   border: 0;
 }
 
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Route changes cross-fade; the top bar stays put. */
+::view-transition-old(root) {
+  animation: vt-out var(--d-1) ease-in both;
+}
+::view-transition-new(root) {
+  animation: vt-in var(--d-3) var(--ease) both;
+}
+@keyframes vt-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -155,9 +199,15 @@ summary {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
   .spin {
     animation-duration: 1.6s !important;
     animation-iteration-count: infinite !important;
+  }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }

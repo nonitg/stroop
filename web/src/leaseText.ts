@@ -50,7 +50,7 @@ export function statusBadge(l: Lease, now: number): { label: string; tone: Tone 
       if (l.handedOverAt > 0) return { label: 'Keys handed over', tone: 'waiting' }
       return { label: 'Waiting for move-in', tone: 'waiting' }
     case 'Active':
-      return { label: `Active, month ${l.paidPeriods} of ${l.periods}`, tone: 'active' }
+      return { label: `Active · month ${l.paidPeriods} of ${l.periods}`, tone: 'active' }
     case 'Completed':
       return { label: 'Fully paid', tone: 'done' }
     case 'Ended':
@@ -58,7 +58,7 @@ export function statusBadge(l: Lease, now: number): { label: string; tone: Tone 
     case 'Refunded':
       return { label: 'Refunded in full', tone: 'returned' }
     case 'Disputed':
-      return { label: 'Disputed, payouts paused', tone: 'paused' }
+      return { label: 'Paused · disputed', tone: 'paused' }
     default:
       // Statuses added to the contract later still get a readable badge.
       return { label: String(l.status), tone: 'waiting' }
@@ -78,43 +78,43 @@ export function nextStep(l: Lease, role: Role, me: string, now: number): string 
   if (l.status === 'Active' && proposalOpen(l, now)) {
     const left = fmtClock(Math.max(0, Math.ceil(l.endProposedAt + proposalWindowSecs(l) - now)))
     if (l.endProposedBy === me)
-      return `You proposed ending the lease early. Waiting for the other side to agree; the proposal lapses in ${left}.`
-    return `${family ? 'Your landlord' : 'The family'} proposed ending the lease early. If you agree within ${left}, rent owed so far goes to the landlord and the rest goes back to the family.`
+      return `You proposed ending early. Waiting for the other side; lapses in ${left}.`
+    return `${family ? 'Your landlord' : 'The family'} proposed ending early. Agree within ${left}: rent owed goes to the landlord, the rest back to the family.`
   }
 
   switch (l.status) {
     case 'Funded':
       return family
-        ? 'Send your landlord the proof link below. Until they accept, you can cancel and get everything back, fee included.'
-        : `The rent is locked. Accept to commit to this lease; the student then has until ${fmtDate(l.moveInBy)} to confirm move-in.`
+        ? 'Send your landlord the proof link. Until they accept, you can cancel for a full refund.'
+        : `The rent is locked. Accept to commit; the student then has until ${fmtDate(l.moveInBy)} to move in.`
     case 'Accepted': {
       const deadlinePassed = now > l.moveInBy
       if (startsOnRelease(l, now))
         return family
-          ? 'The dispute window passed, so the lease starts from when the keys were handed over. Month 1 goes to your landlord at the next payout.'
-          : 'The dispute window passed quietly. Start the lease to collect rent from the day you handed over the keys.'
+          ? 'The dispute window passed. The lease starts from the handover; month 1 goes out at the next payout.'
+          : 'The dispute window passed quietly. Start the lease to collect rent from the handover.'
       if (l.handedOverAt > 0)
         return family
-          ? "Your landlord says the keys are handed over. Confirm move-in if you have them. If something's wrong, raise a dispute before the window closes; otherwise the lease starts on its own."
-          : "Keys marked as handed over. The student can confirm move-in or raise a dispute until the window closes. If they do neither, you can start the lease."
+          ? "Your landlord says the keys are handed over. Confirm move-in, or raise a dispute before the window closes."
+          : 'Keys handed over. If the student neither confirms nor disputes before the window closes, you can start the lease.'
       if (deadlinePassed)
         return family
-          ? 'The move-in deadline passed without the keys being handed over. You can take everything back, fee included.'
-          : 'The move-in deadline passed without a handover, so the family can take the reserve back.'
+          ? 'No handover by the deadline. You can take everything back, fee included.'
+          : 'The move-in deadline passed without a handover. The family can take the reserve back.'
       return family
-        ? `Your landlord accepted. Once you have the keys, confirm move-in: month 1 and the ${fee} service fee are paid and the schedule starts. No keys by ${fmtDate(l.moveInBy)}? You can take everything back.`
-        : `Waiting for the student to confirm move-in. Once you've handed over the keys, mark it here: the reserve can no longer be taken back, and if the student doesn't respond within ${fmtDuration(disputeWindowSecs(l))} the lease starts on its own.`
+        ? `Accepted. Once you have the keys, confirm move-in: month 1 and the ${fee} fee are paid. No keys by ${fmtDate(l.moveInBy)}? Take everything back.`
+        : `Hand over the keys, then mark it here. The reserve can no longer be taken back, and after ${fmtDuration(disputeWindowSecs(l))} of silence the lease starts.`
     }
     case 'Active':
       return family
-        ? "Rent goes to your landlord one month at a time. What isn't owed yet stays locked."
-        : 'Rent unlocks for you every month, on schedule. Nobody can pay it out early, including you.'
+        ? "Paid monthly. What isn't owed yet stays locked."
+        : 'Rent unlocks monthly, on schedule. Nobody can pay it out early, including you.'
     case 'Disputed':
       return '' // shown as a callout (DISPUTE_NOTE) instead
     case 'Completed':
       return 'Every month has been paid to the landlord.'
     case 'Ended':
-      return 'This lease has ended. Rent owed went to the landlord and the rest went back to the family.'
+      return 'Ended. Rent owed went to the landlord; the rest went back to the family.'
     case 'Refunded':
       return 'The full amount, fee included, went back to the family.'
     default:

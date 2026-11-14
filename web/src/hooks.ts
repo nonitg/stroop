@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import type { Keypair } from '@stellar/stellar-sdk'
 import { type Lease, type Role, explainError, getBalances, getKeypair, leasesFor, setupWallet } from './stellar'
 
@@ -18,8 +19,13 @@ export function useRoute() {
   const [route, setRoute] = useState<Route>(parseRoute)
   useEffect(() => {
     const on = () => {
-      setRoute(parseRoute())
-      window.scrollTo(0, 0)
+      const swap = () => {
+        flushSync(() => setRoute(parseRoute()))
+        window.scrollTo(0, 0)
+      }
+      // Cross-fade between screens where the browser supports it.
+      if (document.startViewTransition && !reducedMotion()) document.startViewTransition(swap)
+      else swap()
     }
     window.addEventListener('hashchange', on)
     return () => window.removeEventListener('hashchange', on)
@@ -30,6 +36,34 @@ export function useRoute() {
 export const verifyLink = (id: number) => `${window.location.origin}${window.location.pathname}#/lease/${id}`
 
 // ---------- Shared hooks ----------
+
+export const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+
+/** Eases a displayed number toward `target`, so balances visibly move when money moves. */
+export function useTween(target: number, ms = 900) {
+  const [value, setValue] = useState(target)
+  const shown = useRef(target)
+  useEffect(() => {
+    const from = shown.current
+    if (from === target || reducedMotion()) {
+      shown.current = target
+      setValue(target)
+      return
+    }
+    const start = performance.now()
+    let raf = 0
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - start) / ms)
+      const v = from + (target - from) * (1 - Math.pow(1 - p, 4))
+      shown.current = v
+      setValue(v)
+      if (p < 1) raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [target, ms])
+  return value
+}
 
 export function useNow(intervalMs = 1000) {
   const [now, setNow] = useState(Date.now() / 1000)

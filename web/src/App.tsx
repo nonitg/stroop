@@ -1,6 +1,8 @@
+import { useLayoutEffect, useRef, useState } from 'react'
+import { ArrowUpRight } from 'lucide-react'
 import { CONTRACTS, explorer, resetDemo, short } from './stellar'
 import { type Route, useRoute } from './hooks'
-import { ExplorerLink } from './components/ExplorerLink'
+import { BrandMark } from './components/BrandMark'
 import { FamilyView } from './components/FamilyView'
 import { LandlordView } from './components/LandlordView'
 import { ToastProvider } from './components/ToastProvider'
@@ -10,7 +12,7 @@ import './App.css'
 const NAV: { view: Route['view']; href: string; label: string; short: string }[] = [
   { view: 'family', href: '#/family', label: 'Student & family', short: 'Family' },
   { view: 'landlord', href: '#/landlord', label: 'Landlord', short: 'Landlord' },
-  { view: 'verify', href: '#/verify', label: 'Verify a lease', short: 'Verify' },
+  { view: 'verify', href: '#/verify', label: 'Verify', short: 'Verify' },
 ]
 
 export default function App() {
@@ -19,21 +21,21 @@ export default function App() {
     <ToastProvider view={route.view}>
       <header className="topbar">
         <div className="topbar-inner">
-          <a className="brand" href="#/family" aria-label="RentProof home">
+          <a className="brand" href="#/family" aria-label="Stroop home">
             <BrandMark />
-            <span className="wordmark">RentProof</span>
+            <span className="wordmark">Stroop</span>
           </a>
-          <span className="pill">Testnet demo</span>
-          <nav aria-label="Views">
-            {NAV.map((n) => (
-              <a key={n.view} href={n.href} aria-current={route.view === n.view ? 'page' : undefined}>
-                <span className="nav-long">{n.label}</span>
-                <span className="nav-short" aria-hidden>
-                  {n.short}
-                </span>
-              </a>
-            ))}
-          </nav>
+          <RoleNav view={route.view} />
+          <a
+            className="network"
+            href={explorer.contract(CONTRACTS.rentReserve)}
+            target="_blank"
+            rel="noreferrer"
+            title="Live on Stellar Testnet. Test money only."
+          >
+            <span className="live-dot" aria-hidden />
+            Testnet
+          </a>
         </div>
       </header>
       <main>
@@ -42,37 +44,71 @@ export default function App() {
         {route.view === 'verify' && <VerifyView key={route.id ?? 'lookup'} id={route.id} />}
       </main>
       <footer className="site-foot">
-        <p>
-          Testnet prototype. Demo accounts are created in this browser and hold test money only; in production, people
-          sign in with a passkey and never see a seed phrase. Rent contract{' '}
-          <ExplorerLink href={explorer.contract(CONTRACTS.rentReserve)} text={short(CONTRACTS.rentReserve)} />.
-        </p>
+        <span>Testnet prototype · test money only · demo accounts live in this browser</span>
+        <a href={explorer.contract(CONTRACTS.rentReserve)} target="_blank" rel="noreferrer" className="foot-link">
+          Contract <span className="mono">{short(CONTRACTS.rentReserve)}</span> <ArrowUpRight size={13} aria-hidden />
+        </a>
         <button
-          className="btn quiet small"
+          className="foot-link"
           onClick={() => {
             resetDemo()
             window.location.reload()
           }}
         >
-          Reset demo accounts
+          Reset demo
         </button>
       </footer>
     </ToastProvider>
   )
 }
 
-function BrandMark() {
+/** Role switcher; a pill glides to the current view. */
+function RoleNav({ view }: { view: Route['view'] }) {
+  const links = useRef<Partial<Record<Route['view'], HTMLAnchorElement | null>>>({})
+  const [pill, setPill] = useState<{ x: number; w: number } | null>(null)
+  const [glide, setGlide] = useState(false)
+
+  useLayoutEffect(() => {
+    const place = () => {
+      const el = links.current[view]
+      if (el) setPill({ x: el.offsetLeft, w: el.offsetWidth })
+    }
+    place()
+    document.fonts?.ready.then(place)
+    window.addEventListener('resize', place)
+    // Only glide after the first placement, so the pill doesn't fly in on load.
+    const t = requestAnimationFrame(() => setGlide(true))
+    return () => {
+      window.removeEventListener('resize', place)
+      cancelAnimationFrame(t)
+    }
+  }, [view])
+
   return (
-    <svg className="brand-mark" viewBox="0 0 32 32" width="32" height="32" aria-hidden>
-      <rect width="32" height="32" rx="8" fill="var(--spruce)" />
-      <path
-        d="M7.5 15.2 16 8.5l8.5 6.7V24a1.5 1.5 0 0 1-1.5 1.5H9A1.5 1.5 0 0 1 7.5 24z"
-        fill="none"
-        stroke="#fff"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-      <path d="m12.4 18.6 2.6 2.6 4.6-4.8" fill="none" stroke="var(--marigold)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    <nav className="rolenav" aria-label="Views">
+      {pill && (
+        <span
+          className={`rolenav-pill${glide ? ' glide' : ''}`}
+          style={{ transform: `translateX(${pill.x}px)`, width: pill.w }}
+          aria-hidden
+        />
+      )}
+      {NAV.map((n) => (
+        <a
+          key={n.view}
+          ref={(el) => {
+            links.current[n.view] = el
+          }}
+          href={n.href}
+          aria-label={n.label}
+          aria-current={view === n.view ? 'page' : undefined}
+        >
+          <span className="nav-long">{n.label}</span>
+          <span className="nav-short" aria-hidden>
+            {n.short}
+          </span>
+        </a>
+      ))}
+    </nav>
   )
 }

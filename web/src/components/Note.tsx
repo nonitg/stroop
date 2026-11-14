@@ -5,14 +5,16 @@ export function Note(props: { tone: 'protect' | 'paused'; Icon: LucideIcon; titl
   const { tone, Icon, title, body, onDismiss } = props
   return (
     <div className={`note ${tone}`} role="status">
-      <Icon className="note-icon" size={28} aria-hidden />
+      <span className="note-icon" aria-hidden>
+        <Icon size={20} />
+      </span>
       <div>
         <strong>{title}</strong>
         <p>{body}</p>
       </div>
       {onDismiss && (
         <button className="icon-btn" onClick={onDismiss} aria-label="Dismiss">
-          <X size={18} aria-hidden />
+          <X size={16} aria-hidden />
         </button>
       )}
     </div>

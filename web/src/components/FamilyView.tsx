@@ -1,31 +1,30 @@
 import { type FormEvent, useState } from 'react'
 import type { Keypair } from '@stellar/stellar-sdk'
-import { ChevronDown, CircleAlert, LoaderCircle, LockKeyhole, UserRound } from 'lucide-react'
+import { ChevronDown, CircleAlert, LoaderCircle, LockKeyhole, LockKeyholeOpen, Minus, Plus, UserRound } from 'lucide-react'
 import { explainError, feeFor, fmtUSD, getKeypair, logTx, reserve, setupWallet, toUnits } from '../stellar'
 import { FEE_PCT } from '../leaseText'
 import { useLeases, useWallet } from '../hooks'
-import { AccountPanel } from './Account'
+import { Dashboard } from './Dashboard'
+import { Hero } from './Hero'
 import { LeaseList } from './LeaseCard'
-import { ProofPreview } from './ProofPreview'
-import { FamilyStory } from './Story'
+import { Money } from './Money'
+import { MonthTiles } from './Schedule'
 import { useToast } from './useToast'
+
+const MAX_MONTHS = 24
 
 export function FamilyView() {
   const wallet = useWallet('family')
   const { leases, reload } = useLeases(wallet.kp?.publicKey())
   const refreshAll = () => Promise.all([reload(), wallet.refresh()])
+  if (wallet.checked && !wallet.balances) return <Hero role="family" wallet={wallet} />
   return (
-    <div className={`split${wallet.balances ? ' has-account' : ''}`}>
-      <FamilyStory />
-      <div className="workspace">
-        <AccountPanel role="family" wallet={wallet} />
-        {wallet.checked && !wallet.balances && <ProofPreview />}
-        {wallet.kp && <LeaseList role="family" kp={wallet.kp} leases={leases} onChange={refreshAll} />}
-        {wallet.kp && wallet.balances && (
-          <NewLeaseForm kp={wallet.kp} collapsed={!!leases?.length} onCreated={refreshAll} />
-        )}
-      </div>
-    </div>
+    <Dashboard role="family" wallet={wallet} count={leases?.length}>
+      {wallet.kp && <LeaseList role="family" kp={wallet.kp} leases={leases} onChange={refreshAll} />}
+      {wallet.kp && wallet.balances && leases && (
+        <NewLeaseForm kp={wallet.kp} collapsed={leases.length > 0} onCreated={refreshAll} />
+      )}
+    </Dashboard>
   )
 }
 
@@ -42,7 +41,8 @@ function NewLeaseForm({ kp, collapsed, onCreated }: { kp: Keypair; collapsed: bo
   // The contract locks a service fee on top of the rent; it's only charged at move-in.
   const fee = feeFor(rentTotal)
   const total = fmtUSD(rentTotal + fee)
-  const valid = !!landlord && rent > 0 && months >= 1
+  const valid = !!landlord && rent > 0 && months >= 1 && months <= MAX_MONTHS
+  const setMonthsClamped = (n: number) => setMonths(Math.min(MAX_MONTHS, Math.max(1, Math.round(n) || 1)))
 
   const pickDemoLandlord = async () => {
     setError(null)
@@ -61,13 +61,14 @@ function NewLeaseForm({ kp, collapsed, onCreated }: { kp: Keypair; collapsed: bo
     e.preventDefault()
     setError(null)
     setBusy('lock')
+    const t0 = performance.now()
     try {
       const { result, hash } = await reserve.create(kp, landlord.trim(), rent, months)
       const id = Number(result)
       if (hash) logTx({ leaseId: id, label: 'Rent locked', hash, at: Date.now() })
-      toast({ title: 'Rent locked', body: `${total} is now held for lease ${id}.`, hash })
+      toast({ title: 'Rent locked', body: `${total} is held for lease ${id}.`, hash, secs: (performance.now() - t0) / 1000 })
       await onCreated()
-      // Bring the new lease card into view; the form above it just collapsed.
+      // Bring the new lease card into view; the form below it just collapsed.
       requestAnimationFrame(() =>
         document.getElementById(`lease-card-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
       )
@@ -82,69 +83,96 @@ function NewLeaseForm({ kp, collapsed, onCreated }: { kp: Keypair; collapsed: bo
     <form className="lease-form" onSubmit={lock}>
       <div className="field">
         <label htmlFor="landlord">Landlord's Stellar account</label>
-        <input
-          id="landlord"
-          className="mono-input"
-          value={landlord}
-          onChange={(e) => setLandlord(e.target.value)}
-          placeholder="G…"
-          autoComplete="off"
-          spellCheck={false}
-          aria-describedby="landlord-hint"
-        />
-        <div className="field-hint" id="landlord-hint">
-          <span>Starts with G. Your landlord copies it from their RentProof account.</span>
+        <div className="input-row">
+          <input
+            id="landlord"
+            className="input mono"
+            value={landlord}
+            onChange={(e) => setLandlord(e.target.value)}
+            placeholder="G…"
+            autoComplete="off"
+            spellCheck={false}
+            aria-describedby="landlord-hint"
+          />
           {!landlord && (
-            <button type="button" className="btn secondary small" onClick={pickDemoLandlord} disabled={!!busy} aria-busy={busy === 'landlord'}>
+            <button type="button" className="btn secondary" onClick={pickDemoLandlord} disabled={!!busy} aria-busy={busy === 'landlord'}>
               {busy === 'landlord' ? <LoaderCircle className="spin" size={16} aria-hidden /> : <UserRound size={16} aria-hidden />}
-              {busy === 'landlord' ? 'Creating demo landlord…' : 'Use a demo landlord'}
+              {busy === 'landlord' ? 'Creating…' : 'Use a demo landlord'}
             </button>
           )}
         </div>
+        <p className="field-hint" id="landlord-hint">
+          Starts with G. Your landlord copies it from their Stroop account.
+        </p>
       </div>
+
       <div className="field-row">
         <div className="field">
           <label htmlFor="rent">Monthly rent</label>
-          <div className="affix">
+          <div className="input affix">
             <span aria-hidden>$</span>
             <input id="rent" type="number" min={1} inputMode="decimal" value={rent} onChange={(e) => setRent(Number(e.target.value))} />
           </div>
         </div>
-        <div className="field months">
+        <div className="field">
           <label htmlFor="months">Months</label>
-          <input id="months" type="number" min={1} max={24} value={months} onChange={(e) => setMonths(Number(e.target.value))} />
+          <div className="input stepper">
+            <button type="button" onClick={() => setMonthsClamped(months - 1)} disabled={months <= 1} aria-label="One month fewer">
+              <Minus size={16} aria-hidden />
+            </button>
+            <input
+              id="months"
+              type="number"
+              min={1}
+              max={MAX_MONTHS}
+              value={months}
+              onChange={(e) => setMonths(Number(e.target.value))}
+              onBlur={() => setMonthsClamped(months)}
+            />
+            <button type="button" onClick={() => setMonthsClamped(months + 1)} disabled={months >= MAX_MONTHS} aria-label="One month more">
+              <Plus size={16} aria-hidden />
+            </button>
+          </div>
         </div>
       </div>
+
       <div className="lock-summary">
-        <div>
-          <span className="label">Total to lock</span>
-          <span className="amount">{total}</span>
-          <span className="unit">test USDC</span>
+        <div className="lock-total">
+          <span className="eyebrow">Total to lock</span>
+          <Money units={rentTotal + fee} className="lock-amount" />
         </div>
-        <dl className="breakdown">
+        <MonthTiles states={Array(Math.min(Math.max(months || 1, 1), MAX_MONTHS)).fill('locked')} />
+        <dl className="breakdown num">
           <div>
             <dt>Rent</dt>
-            <dd>{fmtUSD(rentTotal)}</dd>
-            <dd className="breakdown-note">{fmtUSD(units(rent))} a month goes to the landlord, never early.</dd>
+            <dd>
+              {fmtUSD(units(rent))} × {months || 0}
+            </dd>
           </div>
           <div>
             <dt>Service fee ({FEE_PCT})</dt>
-            <dd>{fmtUSD(fee)}</dd>
-            <dd className="breakdown-note">Charged only after you move in; refunded if you don't.</dd>
+            <dd>
+              {fmtUSD(fee)} <span className="dd-note">charged at move-in</span>
+            </dd>
           </div>
         </dl>
-        <p className="demo-note">
-          Demo speed: 1 month = 1 minute. If the keys aren't handed over within 30 minutes, you can take everything
-          back.
-        </p>
       </div>
-      <button className="btn primary wide" type="submit" disabled={!!busy || !valid} aria-busy={busy === 'lock'}>
-        {busy === 'lock' ? <LoaderCircle className="spin" size={18} aria-hidden /> : <LockKeyhole size={18} aria-hidden />}
-        {busy === 'lock' ? 'Locking rent…' : `Lock ${total}`}
+
+      <button className="btn primary lg wide lock-btn" type="submit" disabled={!!busy || !valid} aria-busy={busy === 'lock'}>
+        {busy === 'lock' ? (
+          <LoaderCircle className="spin" size={18} aria-hidden />
+        ) : (
+          <span className="lock-icon" aria-hidden>
+            <LockKeyholeOpen size={18} className="open" />
+            <LockKeyhole size={18} className="shut" />
+          </span>
+        )}
+        {busy === 'lock' ? 'Locking on Stellar…' : `Lock ${total}`}
       </button>
+      <p className="demo-note">Demo clock: 1 month = 1 minute. No keys within 30 minutes? Take everything back.</p>
       {error && (
         <p className="alert error" role="alert">
-          <CircleAlert size={18} aria-hidden /> {error}
+          <CircleAlert size={16} aria-hidden /> {error}
         </p>
       )}
     </form>
@@ -152,17 +180,19 @@ function NewLeaseForm({ kp, collapsed, onCreated }: { kp: Keypair; collapsed: bo
 
   if (collapsed)
     return (
-      <details className="panel new-lease">
+      <details className="card new-lease">
         <summary>
-          <h2>Lock rent for another lease</h2>
-          <ChevronDown className="chev" size={20} aria-hidden />
+          <span>Lock rent for another lease</span>
+          <ChevronDown className="chev" size={18} aria-hidden />
         </summary>
         {form}
       </details>
     )
   return (
-    <section className="panel new-lease" aria-labelledby="new-lease-title">
-      <h2 id="new-lease-title">Lock rent for a new lease</h2>
+    <section className="card new-lease" aria-labelledby="new-lease-title">
+      <h3 id="new-lease-title" className="card-title">
+        Lock rent for a new lease
+      </h3>
       {form}
     </section>
   )
