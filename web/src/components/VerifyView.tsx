@@ -100,7 +100,7 @@ function LeaseProof({ id }: { id: number }) {
         </span>
         <h1>Lease {id} wasn't found</h1>
         <p className="lede">Check the number in the link. If it's right, Stellar Testnet may be slow; this page keeps trying.</p>
-        <p className="tech-detail">{error}</p>
+        {!/not found/i.test(error) && <p className="tech-detail">{error}</p>}
         <a className="btn secondary" href="#/verify">
           Check another lease
         </a>

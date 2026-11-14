@@ -25,12 +25,14 @@ export function nextUnlock(lease: Lease, now: number): { index: number; progress
   return { index: lease.paidPeriods + periodsDue(lease, now), progress: 1 - secs / lease.periodSecs }
 }
 
+// A month is the same size on every lease: a shorter lease is a shorter row, a longer one wraps.
+const COLS = { '--cols': 12, '--cols-sm': 6 } as CSSProperties
+
 /** One tile per month of rent. The next locked month slowly fills as its unlock time approaches. */
 export function MonthTiles(props: { states: MonthState[]; next?: { index: number; progress: number } | null; shake?: boolean }) {
   const { states, next, shake } = props
-  const cols = { '--cols': Math.min(states.length, 12), '--cols-sm': Math.min(states.length, 6) } as CSSProperties
   return (
-    <ol className={`tiles${shake ? ' shake' : ''}`} style={cols} aria-label="Rent schedule by month">
+    <ol className={`tiles${shake ? ' shake' : ''}`} style={COLS} aria-label="Rent schedule by month">
       {states.map((s, i) => {
         const { label, Icon } = STATES[s]
         const filling = next?.index === i && s === 'locked'

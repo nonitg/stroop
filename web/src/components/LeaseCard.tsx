@@ -100,8 +100,12 @@ export function LeaseCard(props: { lease: Lease; role: Role; kp: Keypair; onChan
             Lease <span className="num">{lease.id}</span>
           </h3>
           <p className="lease-meta num">
-            {role === 'family' ? 'To' : 'From'} <span className="mono">{short(counterparty)}</span>
-            <span className="sep" aria-hidden>·</span>
+            <span>
+              {role === 'family' ? 'To' : 'From'} <span className="mono">{short(counterparty)}</span>
+            </span>
+            <span className="sep" aria-hidden>
+              ·
+            </span>
             <span>
               {FEE_PCT} fee {fee.amount}, {fee.state}
             </span>

@@ -2458,47 +2458,7 @@ details.new-lease .lease-form {
   .account-side {
     justify-items: start;
   }
-  .account-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  gap: var(--s-4) var(--s-6);
-}
-
-.split {
-  display: grid;
-  gap: 10px;
-}
-
-.split-bar {
-  display: flex;
-  gap: 3px;
-  height: 8px;
-}
-
-.split-bar > span {
-  min-width: 6px;
-  border-radius: 4px;
-  transition: flex-grow 900ms var(--ease);
-}
-
-.split-free {
-  background: var(--spruce);
-}
-
-.split-held {
-  background:
-    repeating-linear-gradient(-45deg, rgb(18 84 63 / 0.14) 0 1px, transparent 1px 5px),
-    var(--spruce-tint-2);
-}
-
-.split-legend .money {
-  font-weight: 600;
-  color: var(--ink);
-}
-
-.account-balance {
+  .account-balance {
     font-size: 2.125rem;
   }
   .figures {
