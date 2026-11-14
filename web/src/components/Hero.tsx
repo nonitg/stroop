@@ -1,38 +1,31 @@
-import { type CSSProperties, useEffect, useState } from 'react'
-import {
-  ArrowRight,
-  CalendarClock,
-  Landmark,
-  LockKeyhole,
-  ShieldCheck,
-  Undo2,
-  type LucideIcon,
-} from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { ArrowRight } from 'lucide-react'
 import type { Role } from '../stellar'
 import { type Wallet, reducedMotion } from '../hooks'
+import { fmtMoney, offRampQuote } from '../money'
 import { AccountSetup } from './Account'
 import { Money } from './Money'
-import { type MonthState, MonthTiles } from './Schedule'
+import { type MonthState, MonthBar } from './Schedule'
 
-const COPY: Record<Role, { eyebrow: string; title: string; lede: string; pillars: [LucideIcon, string, string][] }> = {
+const COPY: Record<Role, { title: string; lede: string; fee: string; steps: [string, string][] }> = {
   family: {
-    eyebrow: 'For students & families',
     title: 'Proof of rent, not prepayment.',
-    lede: "Show your landlord the rent is there, without handing it over. Paid monthly; whatever isn't owed yet stays yours.",
-    pillars: [
-      [LockKeyhole, 'Locked, not handed over', 'Rent sits in a smart contract with fixed rules.'],
-      [ShieldCheck, 'Verified live', 'Your landlord checks it on Stellar, in one tap.'],
-      [Undo2, 'Unused rent returns', 'Fake listing or early exit? It comes back.'],
+    lede: 'Lock a year of rent where your landlord can see it, without handing it over. They’re paid one month at a time; what isn’t owed yet stays yours.',
+    fee: 'You pay 1% of the rent, only after you move in. Landlords pay nothing.',
+    steps: [
+      ['Lock the rent', 'Pay from your bank in your own currency. It’s converted to USDC and locked in a Stellar contract.'],
+      ['Your landlord checks it', 'They open your proof link and see the money, live. No credit history needed.'],
+      ['Paid monthly, refunded if fake', 'One month goes out each rent day. No keys by the deadline? Everything comes back.'],
     ],
   },
   landlord: {
-    eyebrow: 'For landlords',
     title: 'See the rent before you hand over the keys.',
-    lede: 'The whole lease is locked up front and released to you every month, on schedule.',
-    pillars: [
-      [ShieldCheck, 'Locked before you commit', 'The full lease is held before you accept.'],
-      [CalendarClock, 'Paid on schedule', 'Each month unlocks on time, only to you.'],
-      [Landmark, 'Cash out to CAD', 'Withdraw to your bank through a Stellar anchor.'],
+    lede: 'The family locks the whole lease up front. You verify it live, then it’s paid to you every month, on schedule.',
+    fee: 'Free for landlords. You keep 100% of the rent; the family pays Stroop’s 1%.',
+    steps: [
+      ['See the rent first', 'Open the family’s proof link: the full lease is locked before you commit.'],
+      ['Accept, hand over keys', 'Once the keys are handed over, the money can’t be taken back.'],
+      ['Paid monthly, in CAD', 'Each month arrives on schedule. Cash out to your Canadian bank any time.'],
     ],
   },
 }
@@ -44,26 +37,29 @@ export function Hero({ role, wallet }: { role: Role; wallet: Wallet }) {
     <div className="hero-wrap">
       <section className="hero" aria-labelledby="hero-title">
         <div className="hero-copy">
-          <p className="eyebrow">{c.eyebrow}</p>
           <h1 id="hero-title" className="hero-title">
             {c.title}
           </h1>
           <p className="hero-lede">{c.lede}</p>
           <AccountSetup role={role} wallet={wallet} />
+          <p className="hero-fee">
+            {c.fee}{' '}
+            <a className="text-link" href="#/how">
+              See every fee <ArrowRight size={14} aria-hidden />
+            </a>
+          </p>
         </div>
         <ReserveVisual role={role} />
       </section>
-      <ul className="pillars">
-        {c.pillars.map(([Icon, title, body]) => (
+      <ol className="steps">
+        {c.steps.map(([title, body], i) => (
           <li key={title}>
-            <Icon size={18} aria-hidden />
-            <div>
-              <h2>{title}</h2>
-              <p>{body}</p>
-            </div>
+            <span className="step-n">{i + 1}</span>
+            <h2>{title}</h2>
+            <p>{body}</p>
           </li>
         ))}
-      </ul>
+      </ol>
     </div>
   )
 }
@@ -87,34 +83,26 @@ function ReserveVisual({ role }: { role: Role }) {
   const states: MonthState[] = Array.from({ length: MONTHS }, (_, i) => (i < paid ? 'paid' : 'locked'))
   const family = role === 'family'
   return (
-    <figure className="reserve-visual on-dark" aria-label="Example: a year of rent, released one month at a time">
-      <div className="rv-head">
-        <span className="rv-title">
-          <ShieldCheck size={16} aria-hidden /> {family ? 'Rent reserve' : 'Incoming rent'}
-        </span>
-        <span className="rv-tag">Example</span>
-      </div>
-      <div className="rv-body" aria-hidden>
-        <span className="rv-label">{family ? 'Locked' : 'Received'}</span>
-        <p className="rv-amount">
-          <Money units={(family ? MONTHS - paid : paid) * RENT} />
-        </p>
-        <div className="rv-tiles" style={{ '--fill-ms': `${TICK_MS}ms` } as CSSProperties}>
-          <MonthTiles states={states} next={!still && paid < MONTHS ? { index: paid, progress: 1 } : null} />
+    <figure className="visual" aria-label="Example: a year of rent, paid one month at a time">
+      <p className="visual-label">{family ? 'Example lease · still locked' : 'Example lease · paid to you'}</p>
+      <p className="visual-amount" aria-hidden>
+        <Money units={(family ? MONTHS - paid : paid) * RENT} />
+      </p>
+      <MonthBar states={states} next={!still && paid < MONTHS ? { index: paid, progress: 1 } : null} />
+      <dl className="visual-rows num" aria-hidden>
+        <div>
+          <dt>Paid to landlord</dt>
+          <dd>
+            {paid} of {MONTHS} months
+          </dd>
         </div>
-      </div>
-      <div className="rv-flow" aria-hidden>
-        <span className="rv-from">Reserve</span>
-        <span className="rv-track">
-          {paid > 0 && <span key={paid} className="rv-pulse" />}
-        </span>
-        <span className="rv-to">
-          {family ? 'Landlord' : 'You'} <ArrowRight size={13} />
-        </span>
-        <span key={`amt-${paid}`} className="rv-delta num">
-          {paid > 0 ? `+$${RENT.toLocaleString('en-US')} · month ${paid}` : 'Waiting for move-in'}
-        </span>
-      </div>
+        <div>
+          <dt>Each month</dt>
+          <dd>
+            {fmtMoney(RENT, 'USD')} ≈ {fmtMoney(offRampQuote(RENT).receive, 'CAD')} in their bank
+          </dd>
+        </div>
+      </dl>
     </figure>
   )
 }

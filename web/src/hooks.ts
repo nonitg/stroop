@@ -1,17 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import type { Keypair } from '@stellar/stellar-sdk'
-import { type Lease, type Role, explainError, getBalances, getKeypair, leasesFor, setupWallet } from './stellar'
+import { type Lease, type Role, explainError, getBalances, getKeypair, leasesFor, setupWallet, txFee } from './stellar'
 
 // ---------- Routing (hash based so the static build works anywhere) ----------
 
-export type Route = { view: 'family' } | { view: 'landlord' } | { view: 'verify'; id?: number }
+export type Route = { view: 'family' } | { view: 'landlord' } | { view: 'verify'; id?: number } | { view: 'how' }
 
 function parseRoute(): Route {
   const h = window.location.hash.replace(/^#\/?/, '')
   if (h.startsWith('lease/')) return { view: 'verify', id: Number(h.split('/')[1]) }
   if (h === 'verify') return { view: 'verify' }
   if (h === 'landlord') return { view: 'landlord' }
+  if (h === 'how') return { view: 'how' }
   return { view: 'family' }
 }
 
@@ -133,4 +134,41 @@ export function useLeases(pub: string | undefined) {
     return () => clearInterval(t)
   }, [load])
   return { leases, reload: load }
+}
+
+/** Total network fees (XLM) Stellar charged for these transactions; null until all are known. */
+export function useNetworkFees(hashes: string[]) {
+  const [xlm, setXlm] = useState<number | null>(null)
+  const key = hashes.join(',')
+  useEffect(() => {
+    let live = true
+    if (!key) return
+    Promise.all(key.split(',').map(txFee))
+      .then((fees) => live && setXlm(fees.reduce((a, b) => a + b, 0)))
+      .catch(() => live && setXlm(null))
+    return () => {
+      live = false
+    }
+  }, [key])
+  return key ? xlm : 0
+}
+
+/** The currency a family pays from, remembered in this browser. */
+export function useHomeCurrency() {
+  const [code, setCode] = useState(() => {
+    try {
+      return localStorage.getItem('rp:currency') ?? 'INR'
+    } catch {
+      return 'INR'
+    }
+  })
+  const set = (c: string) => {
+    setCode(c)
+    try {
+      localStorage.setItem('rp:currency', c)
+    } catch {
+      /* preference only */
+    }
+  }
+  return [code, set] as const
 }

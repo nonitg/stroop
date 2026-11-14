@@ -1,27 +1,25 @@
 import type { ReactNode } from 'react'
 import type { Lease, Role } from '../stellar'
 import type { Wallet } from '../hooks'
+import { moneyTrail } from '../leaseText'
 import { AccountSkeleton, AccountSummary } from './Account'
 
-const TITLES: Record<Role, string> = { family: 'Student & family', landlord: 'Landlord' }
+const TITLES: Record<Role, string> = { family: 'Your leases', landlord: 'Incoming rent' }
 
-/** Signed-in layout: one focused column with the account on top and leases below. */
+/** Signed-in layout: leases in the main column, the account and its money in a side column. */
 export function Dashboard(props: { role: Role; wallet: Wallet; leases: Lease[] | null; children: ReactNode }) {
   const { role, wallet, leases, children } = props
-  const count = leases?.length
-  // Rent still sitting in this account's reserves: the family's money until due, the landlord's once it is.
-  const reserved = (leases ?? []).reduce((sum, l) => sum + l.held, 0n)
+  // Money still in this account's reserves: for the family that includes fees not yet charged.
+  const reserved = (leases ?? []).reduce((sum, l) => sum + (role === 'family' ? moneyTrail(l).locked : l.held), 0n)
   return (
     <div className="dash">
-      <h1 className="sr-only">{TITLES[role]} dashboard</h1>
-      {wallet.balances ? <AccountSummary role={role} wallet={wallet} reserved={reserved} /> : <AccountSkeleton />}
-      {!!count && (
-        <div className="section-head">
-          <h2>Leases</h2>
-          <span className="count num">{count}</span>
-        </div>
-      )}
-      {children}
+      <aside className="dash-side">
+        {wallet.balances ? <AccountSummary role={role} wallet={wallet} reserved={reserved} /> : <AccountSkeleton />}
+      </aside>
+      <div className="dash-main">
+        <h1 className={leases?.length ? 'page-title' : 'sr-only'}>{TITLES[role]}</h1>
+        {children}
+      </div>
     </div>
   )
 }

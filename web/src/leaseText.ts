@@ -41,6 +41,20 @@ export function feeLine(l: Lease): { amount: string; state: string } {
   return { amount, state: 'held until move-in' }
 }
 
+/** Where every unit of a lease's money is right now. */
+export function moneyTrail(l: Lease) {
+  const rentTotal = l.rent * BigInt(l.periods)
+  const fee = feeFor(rentTotal)
+  const feeCharged = l.start > 0 ? fee : 0n
+  const feeHeld = l.start === 0 && l.status !== 'Refunded' && l.status !== 'Ended' ? fee : 0n
+  const putIn = rentTotal + fee
+  const paid = l.rent * BigInt(l.paidPeriods)
+  const locked = l.held + feeHeld
+  // Whatever isn't paid out, charged or still locked went back to the family.
+  const returned = putIn - paid - feeCharged - locked
+  return { rentTotal, fee, feeCharged, feeHeld, putIn, paid, locked, returned: returned > 0n ? returned : 0n }
+}
+
 export function statusBadge(l: Lease, now: number): { label: string; tone: Tone } {
   switch (l.status) {
     case 'Funded':

@@ -11,6 +11,7 @@ import {
   contract,
 } from '@stellar/stellar-sdk'
 import ids from './contracts.json'
+import { fmtMoney } from './money'
 
 export const NET = {
   passphrase: Networks.TESTNET,
@@ -69,8 +70,7 @@ export const explorer = {
 
 export const toUnits = (dollars: number) => BigInt(Math.round(dollars * 100)) * (UNIT / 100n)
 export const fromUnits = (units: bigint) => Number(units) / Number(UNIT)
-export const fmtUSD = (units: bigint) =>
-  fromUnits(units).toLocaleString('en-US', { style: 'currency', currency: 'USD' })
+export const fmtUSD = (units: bigint) => fmtMoney(fromUnits(units), 'USD', { cents: true })
 export const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`
 
 // ---------- Demo wallets (testnet only; production would use passkey smart wallets) ----------
@@ -118,18 +118,25 @@ export async function setupWallet(role: Role, onStep: (step: string) => void): P
 
   if (role === 'family') {
     onStep('Receiving 20,000 test USDC from the faucet')
-    const faucet = await contract.Client.from({
-      contractId: ids.faucet,
-      networkPassphrase: NET.passphrase,
-      rpcUrl: NET.rpcUrl,
-      publicKey: kp.publicKey(),
-      ...contract.basicNodeSigner(kp, NET.passphrase),
-    })
-    const tx = await (faucet as any).drip({ to: kp.publicKey() })
-    await tx.signAndSend()
+    await dripTestUsdc(kp)
   }
   onStep('Ready')
   return kp
+}
+
+export const TEST_DRIP_USDC = 20_000
+
+/** Testnet stand-in for an on-ramp: mints 20,000 test USDC to the account. */
+export async function dripTestUsdc(kp: Keypair) {
+  const faucet = await contract.Client.from({
+    contractId: ids.faucet,
+    networkPassphrase: NET.passphrase,
+    rpcUrl: NET.rpcUrl,
+    publicKey: kp.publicKey(),
+    ...contract.basicNodeSigner(kp, NET.passphrase),
+  })
+  const tx = await (faucet as any).drip({ to: kp.publicKey() })
+  await tx.signAndSend()
 }
 
 async function accountExists(pub: string) {
@@ -212,11 +219,11 @@ async function send<T>(kp: Keypair, method: string, args: Record<string, unknown
 }
 
 export const reserve = {
-  create: (kp: Keypair, landlord: string, rentDollars: number, months: number) =>
+  create: (kp: Keypair, landlord: string, mediator: string, rentDollars: number, months: number) =>
     send<bigint>(kp, 'create', {
       payer: kp.publicKey(),
       landlord,
-      mediator: ids.mediator,
+      mediator,
       rent: toUnits(rentDollars),
       periods: months,
       period_secs: BigInt(DEMO_PERIOD_SECS),
@@ -301,6 +308,22 @@ export function secsToNextRelease(l: Lease, nowSecs = Date.now() / 1000): number
   const elapsedPeriods = Math.floor((nowSecs - l.start) / l.periodSecs)
   if (1 + elapsedPeriods >= l.periods) return null
   return Math.max(0, Math.ceil(l.start + (elapsedPeriods + 1) * l.periodSecs - nowSecs))
+}
+
+/** Network fee Stellar charged for a transaction, in XLM. Cached: a settled fee never changes. */
+export async function txFee(hash: string): Promise<number> {
+  const key = `rp:fee:${hash}`
+  const cached = localStorage.getItem(key)
+  if (cached) return Number(cached)
+  const res = await fetch(`${NET.horizonUrl}/transactions/${hash}`)
+  if (!res.ok) throw new Error('Transaction not found yet')
+  const xlm = Number((await res.json()).fee_charged) / 1e7
+  try {
+    localStorage.setItem(key, String(xlm))
+  } catch {
+    /* cache is a convenience */
+  }
+  return xlm
 }
 
 // Local log of tx hashes per lease so the UI can link every action to the explorer.

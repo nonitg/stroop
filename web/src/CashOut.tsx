@@ -1,25 +1,22 @@
 import { useEffect, useState } from 'react'
-import { ArrowUpRight, Check, CircleAlert, Landmark, LoaderCircle, X } from 'lucide-react'
+import { ArrowUpRight, Check, CircleAlert, LoaderCircle, X } from 'lucide-react'
 import { getKeypair } from './stellar'
 import { ANCHOR_DOMAIN, authenticate, discoverAnchor, startWithdrawal, withdrawalStatus } from './sep24'
-import { Money } from './components/Money'
+import { OFF_RAMP_FEE, fmtMoney, offRampQuote, pct } from './money'
 
 type Phase = 'idle' | 'working' | 'open' | 'error'
 
-const STEPS = [
-  { label: 'Find the anchor', tag: 'SEP-1' },
-  { label: 'Sign in with your Stellar account', tag: 'SEP-10' },
-  { label: 'Open the secure withdrawal form', tag: 'SEP-24' },
-]
+const STEPS = ['Find the off-ramp', 'Sign in with your Stroop account', 'Enter your bank details on their secure form']
 
-// Landlord withdraws received USDC to a bank account through a Stellar anchor.
+// Landlord withdraws received USDC to a Canadian bank through a Stellar anchor (the off-ramp).
 // The SEP-10 sign-in and SEP-24 form are real (SDF's test anchor); on testnet no money moves.
-export function CashOut({ onClose, amount }: { onClose: () => void; amount: bigint }) {
+export function CashOut({ onClose, amount }: { onClose: () => void; amount: number }) {
   const [phase, setPhase] = useState<Phase>('idle')
   const [step, setStep] = useState(-1)
   const [error, setError] = useState('')
   const [status, setStatus] = useState<string | null>(null)
   const [poll, setPoll] = useState<(() => Promise<string>) | null>(null)
+  const q = offRampQuote(amount)
 
   useEffect(() => {
     if (!poll) return
@@ -57,35 +54,46 @@ export function CashOut({ onClose, amount }: { onClose: () => void; amount: bigi
   }
 
   return (
-    <section className="cashout" aria-labelledby="cashout-title">
-      <header className="cashout-head">
-        <span className="cashout-icon" aria-hidden>
-          <Landmark size={18} />
-        </span>
-        <div>
-          <h4 id="cashout-title">Cash out to a Canadian bank</h4>
-          <p>
-            <Money units={amount} /> received in USDC
-          </p>
-        </div>
+    <section className="panel" aria-labelledby="cashout-title">
+      <header className="panel-head">
+        <h3 id="cashout-title">Cash out to your bank</h3>
         <button className="icon-btn" onClick={onClose} aria-label="Close cash out">
           <X size={16} aria-hidden />
         </button>
       </header>
 
+      <dl className="quote num">
+        <div>
+          <dt>You cash out</dt>
+          <dd>{fmtMoney(amount, 'USD', { cents: true })}</dd>
+        </div>
+        <div>
+          <dt>Rate</dt>
+          <dd>1 USDC = {fmtMoney(q.rate, 'CAD', { cents: true })}</dd>
+        </div>
+        <div>
+          <dt>Off-ramp fee, est. {pct(OFF_RAMP_FEE)}</dt>
+          <dd>−{fmtMoney(q.fee, 'CAD', { cents: true })}</dd>
+        </div>
+        <div className="quote-total">
+          <dt>Lands in your bank</dt>
+          <dd>≈ {fmtMoney(q.receive, 'CAD', { cents: true })}</dd>
+        </div>
+      </dl>
+
       {phase !== 'idle' && (
-        <ol className="cashout-steps" aria-live="polite">
-          {STEPS.map((s, i) => {
-            const state = i < step ? 'done' : i === step && phase === 'working' ? 'active' : phase === 'error' && i === step ? 'failed' : 'todo'
+        <ol className="checklist" aria-live="polite">
+          {STEPS.map((label, i) => {
+            const state =
+              i < step ? 'done' : i === step && phase === 'working' ? 'active' : phase === 'error' && i === step ? 'failed' : 'todo'
             return (
-              <li key={s.tag} className={state}>
+              <li key={label} className={state}>
                 <span className="step-mark" aria-hidden>
                   {state === 'done' && <Check size={12} strokeWidth={3} />}
                   {state === 'active' && <LoaderCircle className="spin" size={14} />}
                   {state === 'failed' && <X size={12} strokeWidth={3} />}
                 </span>
-                {s.label}
-                <span className="tag mono">{s.tag}</span>
+                {label}
               </li>
             )
           })}
@@ -93,8 +101,8 @@ export function CashOut({ onClose, amount }: { onClose: () => void; amount: bigi
       )}
 
       {phase === 'open' && (
-        <p className="cashout-status">
-          Form open in a new window · status <strong>{status?.replace(/_/g, ' ')}</strong>
+        <p className="panel-status">
+          Their form is open in a new window. Status: <strong>{status?.replace(/_/g, ' ')}</strong>
         </p>
       )}
       {phase === 'error' && (
@@ -103,13 +111,13 @@ export function CashOut({ onClose, amount }: { onClose: () => void; amount: bigi
         </p>
       )}
       {(phase === 'idle' || phase === 'error') && (
-        <button className="btn primary" onClick={start}>
-          {phase === 'error' ? 'Try again' : 'Withdraw via anchor'} <ArrowUpRight size={16} aria-hidden />
+        <button className="btn primary wide" onClick={start}>
+          {phase === 'error' ? 'Try again' : 'Continue to the off-ramp'} <ArrowUpRight size={16} aria-hidden />
         </button>
       )}
       <p className="fine">
-        Testnet: the sign-in and form are real, on SDF's reference anchor ({ANCHOR_DOMAIN}); no money moves. In production a
-        licensed Canadian off-ramp pays out in CAD.
+        A licensed Canadian off-ramp turns USDC into dollars in your bank. Testnet: the sign-in and form are real, on SDF’s
+        test anchor ({ANCHOR_DOMAIN}), but no money moves. Rate and fee are estimates.
       </p>
     </section>
   )

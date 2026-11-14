@@ -7,7 +7,6 @@ import {
   CirclePause,
   Ellipsis,
   Hourglass,
-  Landmark,
   Link,
   LoaderCircle,
   ShieldCheck,
@@ -21,16 +20,16 @@ import {
   explorer,
   logTx,
   periodsDue,
-  secsToNextRelease,
   short,
   txsFor,
 } from '../stellar'
-import { CashOut } from '../CashOut'
 import { useNow, verifyLink } from '../hooks'
-import { DISPUTE_NOTE, FEE_PCT, disputeWindowLeft, feeLine, fmtClock, inDisputeWindow, nextStep } from '../leaseText'
+import { DISPUTE_NOTE, disputeWindowLeft, fmtClock, inDisputeWindow, nextStep } from '../leaseText'
+import { mediatorName } from '../mediators'
 import { ExplorerLink } from './ExplorerLink'
 import { type Action, leaseActions } from './leaseActions'
 import { Money } from './Money'
+import { MoneyTrail } from './MoneyTrail'
 import { Schedule } from './Schedule'
 import { StatusBadge } from './StatusBadge'
 import { Note } from './Note'
@@ -51,14 +50,11 @@ export function LeaseCard(props: { lease: Lease; role: Role; kp: Keypair; onChan
   // Month count when an early withdrawal was refused; the note goes away once rent moves on.
   const [blockedAt, setBlockedAt] = useState<number | null>(null)
   const [shake, setShake] = useState(false)
-  const [cashout, setCashout] = useState(false)
   const due = periodsDue(lease, now)
-  const next = secsToNextRelease(lease, now)
   const actions = leaseActions(lease, role, kp, now)
   const askLandlord = role === 'family' && lease.status === 'Funded'
   const paidTotal = lease.rent * BigInt(lease.paidPeriods)
   const guidance = nextStep(lease, role, kp.publicKey(), now)
-  const fee = feeLine(lease)
   const preStart = lease.status === 'Funded' || lease.status === 'Accepted'
   const counterparty = role === 'family' ? lease.landlord : lease.payer
   const loud = actions.filter((a) => a.tier !== 'quiet')
@@ -95,56 +91,30 @@ export function LeaseCard(props: { lease: Lease; role: Role; kp: Keypair; onChan
   return (
     <article className="card lease" id={`lease-card-${lease.id}`} aria-labelledby={`lease-${lease.id}`}>
       <header className="lease-head">
-        <div>
-          <h3 id={`lease-${lease.id}`}>
-            Lease <span className="num">{lease.id}</span>
-          </h3>
-          <p className="lease-meta num">
-            <span>
-              {role === 'family' ? 'To' : 'From'} <span className="mono">{short(counterparty)}</span>
-            </span>
-            <span className="sep" aria-hidden>
-              ·
-            </span>
-            <span>
-              {FEE_PCT} fee {fee.amount}, {fee.state}
-            </span>
-          </p>
-        </div>
+        <h3 id={`lease-${lease.id}`}>
+          Lease <span className="num">{lease.id}</span>
+        </h3>
         <StatusBadge lease={lease} now={now} />
       </header>
+      <p className="lease-meta">
+        {role === 'family' ? 'Landlord' : 'Family'} <span className="mono">{short(counterparty)}</span>
+        <span className="sep" aria-hidden>
+          ·
+        </span>
+        Mediator: {mediatorName(lease.mediator)}
+      </p>
 
-      <dl className="figures">
-        <div className="fig lead">
-          <dt>Locked</dt>
-          <dd>
-            <Money units={lease.held} />
-          </dd>
-        </div>
-        <div className="fig">
-          <dt>Paid to landlord</dt>
-          <dd>
-            <Money units={paidTotal} />
-          </dd>
-        </div>
-        <div className="fig">
-          <dt>Rent</dt>
-          <dd className="num">
-            <Money units={lease.rent} /> <span className="times">× {lease.periods}</span>
-          </dd>
-        </div>
-      </dl>
+      <div className="lease-amount">
+        <Money units={lease.held} className="amount-lg" />
+        <p className="num">
+          {role === 'family' ? 'locked' : 'locked for you'} ·{' '}
+          <Money units={paidTotal} /> of <Money units={lease.rent * BigInt(lease.periods)} /> paid {role === 'family' ? 'to your landlord' : 'to you'}
+        </p>
+      </div>
+
+      <Schedule lease={lease} now={now} shake={shake} />
 
       {preStart && <Lifecycle lease={lease} />}
-
-      <div className="lease-schedule">
-        <Schedule lease={lease} now={now} shake={shake} />
-        {next !== null && (
-          <p className="unlock num">
-            Month {lease.paidPeriods + due + 1} in <strong className="clock">{fmtClock(next)}</strong>
-          </p>
-        )}
-      </div>
 
       {inDisputeWindow(lease, now) && (
         <Countdown Icon={Hourglass} secs={disputeWindowLeft(lease, now)} total={disputeWindowSecs(lease)}>
@@ -164,18 +134,16 @@ export function LeaseCard(props: { lease: Lease; role: Role; kp: Keypair; onChan
         />
       )}
 
-      {guidance && <p className="next-step">{guidance}</p>}
-
-      {(loud.length > 0 || quiet.length > 0 || askLandlord || (role === 'landlord' && lease.paidPeriods > 0)) && (
-        <div className="actions">
-          {askLandlord && <CopyProofLink id={lease.id} primary />}
-          {loud.map(actionButton)}
-          {role === 'landlord' && lease.paidPeriods > 0 && (
-            <button className="btn secondary" onClick={() => setCashout((o) => !o)} aria-expanded={cashout}>
-              <Landmark size={17} aria-hidden /> Cash out to CAD
-            </button>
+      {(guidance || loud.length > 0 || quiet.length > 0 || askLandlord) && (
+        <div className="next">
+          {guidance && <p className="next-step">{guidance}</p>}
+          {(loud.length > 0 || quiet.length > 0 || askLandlord) && (
+            <div className="actions">
+              {askLandlord && <CopyProofLink id={lease.id} primary />}
+              {loud.map(actionButton)}
+              {quiet.length > 0 && <MoreMenu actions={quiet} busy={busy} onPick={act} />}
+            </div>
           )}
-          {quiet.length > 0 && <MoreMenu actions={quiet} busy={busy} onPick={act} />}
         </div>
       )}
 
@@ -185,12 +153,12 @@ export function LeaseCard(props: { lease: Lease; role: Role; kp: Keypair; onChan
         </p>
       )}
 
-      {cashout && <CashOut onClose={() => setCashout(false)} amount={paidTotal} />}
+      <MoneyTrail lease={lease} role={role} />
 
       <footer className="lease-foot">
         <Receipts leaseId={lease.id} />
         <div className="lease-links">
-          <a className="btn quiet sm" href={`#/lease/${lease.id}`}>
+          <a className="text-link" href={`#/lease/${lease.id}`}>
             Proof page <ArrowUpRight size={14} aria-hidden />
           </a>
           {!askLandlord && <CopyProofLink id={lease.id} />}
@@ -250,7 +218,7 @@ function CopyProofLink({ id, primary }: { id: number; primary?: boolean }) {
     setTimeout(() => setCopied(false), 1800)
   }
   return (
-    <button className={`btn ${primary ? 'primary' : 'quiet sm'}`} onClick={run}>
+    <button className={primary ? 'btn primary' : 'text-link'} onClick={run}>
       {copied ? <Check className="pop" size={primary ? 17 : 14} aria-hidden /> : <Link size={primary ? 17 : 14} aria-hidden />}
       {copied ? 'Copied' : primary ? 'Copy proof link for landlord' : 'Copy link'}
     </button>
@@ -314,9 +282,7 @@ function Receipts({ leaseId }: { leaseId: number }) {
   if (txs.length === 0) return <span />
   return (
     <details className="receipts">
-      <summary>
-        Receipts <span className="count num">{txs.length}</span>
-      </summary>
+      <summary>Activity on Stellar ({txs.length})</summary>
       <ol>
         {txs.map((t) => (
           <li key={t.hash}>

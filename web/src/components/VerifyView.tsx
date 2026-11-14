@@ -1,17 +1,8 @@
 import { type FormEvent, useEffect, useState } from 'react'
-import {
-  ArrowRight,
-  CalendarClock,
-  CircleAlert,
-  CirclePause,
-  Handshake,
-  LockKeyhole,
-  Scale,
-  ShieldCheck,
-  Undo2,
-  type LucideIcon,
-} from 'lucide-react'
-import { CONTRACTS, type Lease, explainError, explorer, getLease, short } from '../stellar'
+import { ArrowRight, Check, CircleAlert, CirclePause, ShieldCheck } from 'lucide-react'
+import { CONTRACTS, type Lease, explainError, explorer, fromUnits, getLease, short } from '../stellar'
+import { CAD, fmtMoney } from '../money'
+import { mediatorName } from '../mediators'
 import { useNow } from '../hooks'
 import { DISPUTE_NOTE, FEE_PCT, feeLine, fmtDate } from '../leaseText'
 import { ExplorerLink } from './ExplorerLink'
@@ -112,87 +103,91 @@ function LeaseProof({ id }: { id: number }) {
   const paid = lease.rent * BigInt(lease.paidPeriods)
   const fee = feeLine(lease)
   const ago = checkedAt ? Math.max(0, Math.round(now - checkedAt / 1000)) : 0
-  const rules: [LucideIcon, string, string][] = [
-    [CalendarClock, 'Never paid early', 'One month at a time, on schedule.'],
-    [LockKeyhole, 'Only landlord or family', 'Nobody, including Stroop, can send it anywhere else.'],
-    [Undo2, 'No keys, full refund', `Move-in not confirmed by ${fmtDate(lease.moveInBy)}? Everything goes back.`],
-    [Handshake, 'Early exit takes both sides', 'Unused rent goes back to the family.'],
-    [Scale, 'A mediator can only split', 'Disputes are settled between landlord and family only.'],
+  const rules: [string, string][] = [
+    ['Never paid early', 'One month at a time, on schedule.'],
+    ['Only to the landlord, or back to the family', 'Nobody, including Stroop, can send it anywhere else.'],
+    ['No keys, full refund', `Move-in not confirmed by ${fmtDate(lease.moveInBy)}? Everything goes back to the family.`],
+    ['Ending early takes both sides', 'Rent owed goes to the landlord; the rest goes back to the family.'],
+    ['The mediator can only split', 'In a dispute, they divide the locked rent between landlord and family. Nothing else.'],
   ]
 
   return (
     <article className="proof" aria-labelledby="proof-title">
-      <header className="proof-band on-dark">
+      <header className="proof-head">
         <span className="seal" aria-hidden>
-          <svg viewBox="0 0 24 24" width="26" height="26">
-            <path className="seal-shield" d="M12 2.8 4.5 5.6v5.9c0 4.6 3.1 8.2 7.5 9.7 4.4-1.5 7.5-5.1 7.5-9.7V5.6z" />
-            <path className="seal-check" d="m8.6 12.2 2.4 2.4 4.6-4.8" />
-          </svg>
+          <ShieldCheck size={20} />
         </span>
         <div className="proof-title">
           <h1 id="proof-title">Verified rent reserve</h1>
-          <p className="num">Lease {lease.id}</p>
+          <p className="num">
+            Lease {lease.id} · live from Stellar · {ago < 2 ? 'just checked' : `checked ${ago}s ago`}
+          </p>
         </div>
-        <p className="live num" aria-live="off">
-          <span className="live-dot" aria-hidden />
-          Live · {ago < 2 ? 'just checked' : `checked ${ago}s ago`}
-        </p>
+        <StatusBadge lease={lease} now={now} />
       </header>
 
-      <section className="proof-hero" aria-label="Amount locked">
-        <div className="proof-hero-top">
-          <span className="eyebrow">Locked right now</span>
-          <StatusBadge lease={lease} now={now} />
-        </div>
-        <p className="proof-amount">
-          <Money units={lease.held} />
-          <span className="unit">test USDC</span>
-        </p>
+      <section className="card proof-main" aria-label="Amount locked">
+        <p className="label">Locked right now</p>
+        <Money units={lease.held} className="amount-xl" />
         <p className="proof-sub num">
-          <Money units={paid} /> of <Money units={total} /> paid to the landlord
+          <Money units={paid} /> of <Money units={total} /> paid to the landlord so far
         </p>
         {lease.status === 'Disputed' && <Note tone="paused" Icon={CirclePause} {...DISPUTE_NOTE} />}
         <Schedule lease={lease} now={now} />
         {lease.status === 'Funded' && (
-          <a className="btn primary proof-cta" href="#/landlord">
+          <a className="btn primary" href="#/landlord">
             Landlord? Accept this lease <ArrowRight className="nudge" size={17} aria-hidden />
           </a>
         )}
       </section>
 
-      <dl className="terms">
-        <div>
-          <dt>Monthly rent</dt>
-          <dd className="num">
-            <Money units={lease.rent} /> × {lease.periods}
-          </dd>
-        </div>
-        <div>
-          <dt>Service fee ({FEE_PCT})</dt>
-          <dd className="num">
-            {fee.amount} <span className="dd-note">{fee.state}</span>
-          </dd>
-        </div>
-        <div>
-          <dt>Keys handed over</dt>
-          <dd className="num">
-            {lease.handedOverAt > 0 ? fmtDate(lease.handedOverAt) : lease.start > 0 ? 'At move-in' : 'Not yet'}
-          </dd>
-        </div>
-        <div>
-          <dt>Lease started</dt>
-          <dd className="num">{lease.start > 0 ? fmtDate(lease.start) : 'Not yet'}</dd>
-        </div>
-      </dl>
+      <section className="card proof-section" aria-labelledby="proof-terms">
+        <h2 id="proof-terms">Terms</h2>
+        <dl className="ledger num">
+          <div>
+            <dt>
+              Monthly rent
+              <span className="ledger-note">≈ {fmtMoney(fromUnits(lease.rent) * CAD.perUsd, 'CAD')} a month</span>
+            </dt>
+            <dd>
+              <Money units={lease.rent} /> × {lease.periods}
+            </dd>
+          </div>
+          <div>
+            <dt>
+              Stroop fee, {FEE_PCT}
+              <span className="ledger-note">Paid by the family, {fee.state}. The landlord pays nothing.</span>
+            </dt>
+            <dd>{fee.amount}</dd>
+          </div>
+          <div>
+            <dt>
+              Mediator
+              <span className="ledger-note">Only if either side raises a dispute</span>
+            </dt>
+            <dd>{mediatorName(lease.mediator)}</dd>
+          </div>
+          <div>
+            <dt>Move-in deadline</dt>
+            <dd>{fmtDate(lease.moveInBy)}</dd>
+          </div>
+          <div>
+            <dt>Keys handed over</dt>
+            <dd>{lease.handedOverAt > 0 ? fmtDate(lease.handedOverAt) : lease.start > 0 ? 'At move-in' : 'Not yet'}</dd>
+          </div>
+          <div>
+            <dt>Lease started</dt>
+            <dd>{lease.start > 0 ? fmtDate(lease.start) : 'Not yet'}</dd>
+          </div>
+        </dl>
+      </section>
 
-      <section className="proof-section" aria-labelledby="proof-rules">
-        <h2 id="proof-rules">Enforced by the contract</h2>
+      <section className="card proof-section" aria-labelledby="proof-rules">
+        <h2 id="proof-rules">Rules the contract enforces</h2>
         <ul className="rules">
-          {rules.map(([Icon, title, body]) => (
+          {rules.map(([title, body]) => (
             <li key={title}>
-              <span className="rule-icon" aria-hidden>
-                <Icon size={16} />
-              </span>
+              <Check size={16} aria-hidden />
               <div>
                 <strong>{title}</strong>
                 <p>{body}</p>
@@ -202,9 +197,9 @@ function LeaseProof({ id }: { id: number }) {
         </ul>
       </section>
 
-      <section className="proof-section" aria-labelledby="proof-parties">
-        <h2 id="proof-parties">On-chain accounts</h2>
-        <dl className="parties">
+      <section className="card proof-section" aria-labelledby="proof-parties">
+        <h2 id="proof-parties">Accounts on Stellar</h2>
+        <dl className="ledger">
           <div>
             <dt>Landlord</dt>
             <dd>
@@ -212,7 +207,7 @@ function LeaseProof({ id }: { id: number }) {
             </dd>
           </div>
           <div>
-            <dt>Paid by</dt>
+            <dt>Family</dt>
             <dd>
               <ExplorerLink href={explorer.account(lease.payer)} text={short(lease.payer)} />
             </dd>
@@ -230,12 +225,11 @@ function LeaseProof({ id }: { id: number }) {
             </dd>
           </div>
         </dl>
+        <p className="fine">
+          Read straight from the Stroop contract on Stellar Testnet. Accounts only, no names or personal details. Test USDC has
+          no real value.
+        </p>
       </section>
-
-      <footer className="proof-foot">
-        Read straight from the Stroop contract on Stellar Testnet. Addresses only, no names or personal details. Test USDC
-        has no real value.
-      </footer>
     </article>
   )
 }
@@ -243,13 +237,10 @@ function LeaseProof({ id }: { id: number }) {
 function ProofSkeleton({ id }: { id: number }) {
   return (
     <article className="proof skeleton" aria-busy="true" aria-label={`Reading lease ${id} from Stellar`}>
-      <header className="proof-band on-dark">
-        <span className="seal" aria-hidden />
-        <div className="proof-title">
-          <span className="sk sk-line dark" style={{ width: 180 }} />
-        </div>
+      <header className="proof-head">
+        <span className="sk sk-line" style={{ width: 220 }} />
       </header>
-      <section className="proof-hero">
+      <section className="card proof-main">
         <span className="sk sk-line" style={{ width: 110 }} />
         <span className="sk sk-amount lg" />
         <span className="sk sk-tiles" />

@@ -1,36 +1,36 @@
-/* RentProof design tokens: "glass ledger".
-   One precise typeface, hairlines instead of boxes, and one signature object: the reserve,
-   drawn as a row of months. Spruce = settled and safe; amber = due now; glass = locked and visible. */
+/* Stroop design tokens: "plain ledger".
+   White cards on a warm off-white page, one green for money that's safe or settled,
+   amber only for money due now. Hairlines, not boxes; numbers do the talking. */
 :root {
   color-scheme: light;
 
   /* Color */
-  --canvas: #f3f5f4;
+  --bg: #f7f7f4;
   --surface: #ffffff;
-  --surface-2: #f8faf9;
-  --surface-3: #eef2f0;
-  --ink: #0c1a15;
-  --ink-2: #3d4b45;
-  --ink-3: #5f6e68;
-  --line: #e2e7e5;
-  --line-2: #cdd5d2;
-  --line-3: #9aa8a2;
+  --surface-2: #fafaf8;
+  --surface-3: #f1f1ed;
+  --ink: #121412;
+  --ink-2: #474b47;
+  --ink-3: #686d68;
+  --line: #e7e7e1;
+  --line-2: #d6d7d0;
 
-  --spruce: #12543f;
-  --spruce-hover: #0e4734;
-  --spruce-press: #0a3829;
-  --spruce-deep: #0a2f24;
-  --spruce-night: #071f18;
-  --spruce-tint: #e3efe9;
-  --spruce-tint-2: #cfe3d9;
-  --mint: #5ee0a8;
+  --brand: #14533e;
+  --brand-hover: #0f4532;
+  --brand-press: #0b3627;
+  --brand-tint: #e9f2ed;
+  --brand-ink: #0e3d2d;
 
-  --amber: #f0b23e;
-  --amber-ink: #4a3000;
-  --amber-tint: #fdf3dc;
-  --brick: #b42318;
-  --brick-tint: #fdeeec;
-  --selection: #f7d68c;
+  --seg-locked: #e3e5df;
+  --seg-paid: #14533e;
+  --seg-due: #e0a324;
+  --seg-refunded: #b7c2ce;
+
+  --amber-tint: #fdf5e2;
+  --amber-ink: #6b4800;
+  --danger: #b42318;
+  --danger-tint: #fdf0ee;
+  --selection: #f6dd9a;
 
   /* Type */
   --font: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -43,7 +43,7 @@
   --t-xl: 1.375rem;
   --t-2xl: 1.75rem;
   --t-3xl: 2.5rem;
-  --t-hero: clamp(2.5rem, 1.6rem + 3.4vw, 4rem);
+  --t-hero: clamp(2.5rem, 1.5rem + 3.6vw, 3.875rem);
 
   /* Space (4px base) */
   --s-1: 4px;
@@ -61,31 +61,25 @@
   --r-sm: 6px;
   --r-md: 10px;
   --r-lg: 14px;
-  --r-xl: 20px;
-  --r-pill: 999px;
-  --shadow-1: 0 1px 0 rgb(12 26 21 / 0.03), 0 1px 2px rgb(12 26 21 / 0.06);
-  --shadow-2: 0 1px 1px rgb(12 26 21 / 0.03), 0 2px 4px -2px rgb(12 26 21 / 0.05), 0 12px 32px -16px rgb(12 26 21 / 0.14);
-  --shadow-3: 0 2px 6px rgb(12 26 21 / 0.06), 0 24px 48px -16px rgb(12 26 21 / 0.28);
-  --ring: 0 0 0 3px rgb(18 84 63 / 0.18);
+  --r-xl: 18px;
+  --shadow-1: 0 1px 2px rgb(18 20 18 / 0.04);
+  --shadow-pop: 0 4px 12px rgb(18 20 18 / 0.08), 0 16px 40px -12px rgb(18 20 18 / 0.18);
+  --ring: 0 0 0 3px rgb(20 83 62 / 0.16);
 
-  /* Motion: fast in, gentle settle. Exits are quicker than entrances. */
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
   --d-1: 120ms;
   --d-2: 200ms;
   --d-3: 320ms;
-  --d-4: 560ms;
 
   font-family: var(--font);
   font-size: 100%;
   line-height: 1.5;
-  font-feature-settings: 'ss01' on;
   color: var(--ink);
-  background: var(--canvas);
+  background: var(--bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  scrollbar-color: var(--line-2) var(--canvas);
+  scrollbar-color: var(--line-2) var(--bg);
 }
 
 *,
@@ -97,7 +91,7 @@
 body {
   margin: 0;
   min-width: 320px;
-  background: var(--canvas);
+  background: var(--bg);
 }
 
 #root {
@@ -114,15 +108,24 @@ h4,
 p,
 dl,
 dd,
-figure {
+figure,
+fieldset {
   margin: 0;
+}
+
+fieldset {
+  border: 0;
+  padding: 0;
+  min-width: 0;
 }
 
 h1,
 h2,
-h3 {
+h3,
+h4 {
   text-wrap: balance;
   font-weight: 600;
+  letter-spacing: -0.015em;
 }
 
 p {
@@ -135,19 +138,20 @@ p {
 }
 
 a {
-  color: var(--spruce);
+  color: var(--brand);
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
 }
 
 :focus-visible {
-  outline: 2px solid var(--spruce);
+  outline: 2px solid var(--brand);
   outline-offset: 2px;
   border-radius: var(--r-sm);
 }
 
 input,
 button,
+select,
 summary {
   font: inherit;
   color: inherit;
@@ -173,6 +177,12 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
+.mono {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  letter-spacing: -0.01em;
+}
+
 /* Route changes cross-fade; the top bar stays put. */
 ::view-transition-old(root) {
   animation: vt-out var(--d-1) ease-in both;
@@ -188,7 +198,7 @@ button {
 @keyframes vt-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(4px);
   }
 }
 

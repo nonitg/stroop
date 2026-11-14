@@ -1,9 +1,9 @@
-import { useLayoutEffect, useRef, useState } from 'react'
 import { ArrowUpRight } from 'lucide-react'
 import { CONTRACTS, explorer, resetDemo, short } from './stellar'
 import { type Route, useRoute } from './hooks'
 import { BrandMark } from './components/BrandMark'
 import { FamilyView } from './components/FamilyView'
+import { HowItWorks } from './components/HowItWorks'
 import { LandlordView } from './components/LandlordView'
 import { ToastProvider } from './components/ToastProvider'
 import { VerifyView } from './components/VerifyView'
@@ -12,7 +12,8 @@ import './App.css'
 const NAV: { view: Route['view']; href: string; label: string; short: string }[] = [
   { view: 'family', href: '#/family', label: 'Student & family', short: 'Family' },
   { view: 'landlord', href: '#/landlord', label: 'Landlord', short: 'Landlord' },
-  { view: 'verify', href: '#/verify', label: 'Verify', short: 'Verify' },
+  { view: 'verify', href: '#/verify', label: 'Verify a lease', short: 'Verify' },
+  { view: 'how', href: '#/how', label: 'How it works', short: 'How it works' },
 ]
 
 export default function App() {
@@ -25,7 +26,16 @@ export default function App() {
             <BrandMark />
             <span className="wordmark">Stroop</span>
           </a>
-          <RoleNav view={route.view} />
+          <nav className="nav" aria-label="Views">
+            {NAV.map((n) => (
+              <a key={n.view} href={n.href} aria-current={route.view === n.view ? 'page' : undefined}>
+                <span className="nav-long">{n.label}</span>
+                <span className="nav-short" aria-hidden>
+                  {n.short}
+                </span>
+              </a>
+            ))}
+          </nav>
           <a
             className="network"
             href={explorer.contract(CONTRACTS.rentReserve)}
@@ -42,6 +52,7 @@ export default function App() {
         {route.view === 'family' && <FamilyView />}
         {route.view === 'landlord' && <LandlordView />}
         {route.view === 'verify' && <VerifyView key={route.id ?? 'lookup'} id={route.id} />}
+        {route.view === 'how' && <HowItWorks />}
       </main>
       <footer className="site-foot">
         <span>Testnet prototype · test money only · demo accounts live in this browser</span>
@@ -59,56 +70,5 @@ export default function App() {
         </button>
       </footer>
     </ToastProvider>
-  )
-}
-
-/** Role switcher; a pill glides to the current view. */
-function RoleNav({ view }: { view: Route['view'] }) {
-  const links = useRef<Partial<Record<Route['view'], HTMLAnchorElement | null>>>({})
-  const [pill, setPill] = useState<{ x: number; w: number } | null>(null)
-  const [glide, setGlide] = useState(false)
-
-  useLayoutEffect(() => {
-    const place = () => {
-      const el = links.current[view]
-      if (el) setPill({ x: el.offsetLeft, w: el.offsetWidth })
-    }
-    place()
-    document.fonts?.ready.then(place)
-    window.addEventListener('resize', place)
-    // Only glide after the first placement, so the pill doesn't fly in on load.
-    const t = requestAnimationFrame(() => setGlide(true))
-    return () => {
-      window.removeEventListener('resize', place)
-      cancelAnimationFrame(t)
-    }
-  }, [view])
-
-  return (
-    <nav className="rolenav" aria-label="Views">
-      {pill && (
-        <span
-          className={`rolenav-pill${glide ? ' glide' : ''}`}
-          style={{ transform: `translateX(${pill.x}px)`, width: pill.w }}
-          aria-hidden
-        />
-      )}
-      {NAV.map((n) => (
-        <a
-          key={n.view}
-          ref={(el) => {
-            links.current[n.view] = el
-          }}
-          href={n.href}
-          aria-label={n.label}
-          aria-current={view === n.view ? 'page' : undefined}
-        >
-          <span className="nav-long">{n.label}</span>
-          <span className="nav-short" aria-hidden>
-            {n.short}
-          </span>
-        </a>
-      ))}
-    </nav>
   )
 }
