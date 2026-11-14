@@ -21,7 +21,7 @@ const FEES: [string, string, string, string][] = [
     'Locking stores the lease on Stellar. Accepting, moving in and monthly payouts cost under 1¢.',
   ],
   ['Off-ramp', 'Landlord', `Est. ${pct(OFF_RAMP_FEE)}, set by the licensed off-ramp`, 'When cashing out to a Canadian bank.'],
-  ['Anything else for landlords', 'Nobody', 'None', 'Landlords receive 100% of the rent.'],
+  ['Stroop fee for landlords', 'Nobody', 'None', 'The full rent reaches the landlord’s Stroop account.'],
 ]
 
 /** One page answering: where does the money go, who takes a cut, and what's real in this demo. */

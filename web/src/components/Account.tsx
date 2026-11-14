@@ -16,7 +16,7 @@ const SETUP_STEPS: { match: string; label: string; role?: Role }[] = [
 ]
 
 const ROLE_COPY: Record<Role, { label: string; meta: string; held: string }> = {
-  family: { label: 'Available to lock', meta: 'About 15 seconds · comes with 20,000 test USDC', held: 'Locked in your leases' },
+  family: { label: 'Available to lock', meta: 'About 15 seconds · comes with US$20,000 of test money', held: 'Locked in your leases' },
   landlord: { label: 'Received rent', meta: 'About 10 seconds · free for landlords', held: 'Locked for you' },
 }
 
@@ -84,7 +84,7 @@ export function AccountSummary({ role, wallet, reserved }: { role: Role; wallet:
       </p>
 
       {!panel && (
-        <button className="btn secondary wide" onClick={() => setPanel(true)} disabled={!family && usdc === 0}>
+        <button className="btn secondary wide" onClick={() => setPanel(true)}>
           {family ? <Plus size={16} aria-hidden /> : <Landmark size={16} aria-hidden />}
           {family ? 'Add money' : 'Cash out to your bank'}
         </button>

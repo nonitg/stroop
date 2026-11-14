@@ -167,10 +167,12 @@ function LeaseProof({ id }: { id: number }) {
             </dt>
             <dd>{mediatorName(lease.mediator)}</dd>
           </div>
-          <div>
-            <dt>Move-in deadline</dt>
-            <dd>{fmtDate(lease.moveInBy)}</dd>
-          </div>
+          {lease.start === 0 && (
+            <div>
+              <dt>Move-in deadline</dt>
+              <dd>{fmtDate(lease.moveInBy)}</dd>
+            </div>
+          )}
           <div>
             <dt>Keys handed over</dt>
             <dd>{lease.handedOverAt > 0 ? fmtDate(lease.handedOverAt) : lease.start > 0 ? 'At move-in' : 'Not yet'}</dd>

@@ -94,7 +94,7 @@ export function LeaseCard(props: { lease: Lease; role: Role; kp: Keypair; onChan
         <h3 id={`lease-${lease.id}`}>
           Lease <span className="num">{lease.id}</span>
         </h3>
-        <StatusBadge lease={lease} now={now} />
+        <StatusBadge lease={lease} now={now} role={role} />
       </header>
       <p className="lease-meta">
         {role === 'family' ? 'Landlord' : 'Family'} <span className="mono">{short(counterparty)}</span>
@@ -169,7 +169,7 @@ export function LeaseCard(props: { lease: Lease; role: Role; kp: Keypair; onChan
   )
 }
 
-const LIFECYCLE = ['Rent locked', 'Landlord accepted', 'Keys handed over', 'Moved in'] as const
+const LIFECYCLE = ['Rent locked', 'Landlord accepts', 'Keys handed over', 'Move-in confirmed'] as const
 
 /** Where a lease is before rent starts flowing. */
 function Lifecycle({ lease }: { lease: Lease }) {

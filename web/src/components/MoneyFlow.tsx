@@ -54,10 +54,10 @@ export function MoneyFlow(props: { rent: number; months: number; code: string; y
         <dl className="flow-rows num">
           <Row
             k={`In ${landlord} Canadian bank`}
-            note={`After the off-ramp's est. ${pct(OFF_RAMP_FEE)} cash-out fee, paid by the landlord`}
+            note={`After an est. ${pct(OFF_RAMP_FEE)} cash-out fee, paid by the landlord`}
             v={`≈ ${fmtMoney(out.receive, 'CAD')} / mo`}
           />
-          <Row k="Stroop fee for the landlord" v="None" />
+          <Row k="Stroop fee for the landlord" v="None, the family pays it" />
         </dl>
       </li>
     </ol>

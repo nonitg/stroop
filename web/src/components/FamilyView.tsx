@@ -97,7 +97,7 @@ function NewLeaseForm({ kp, collapsed, onCreated }: { kp: Keypair; collapsed: bo
           <span className="step-n">1</span> The lease
         </h3>
         <div className="field">
-          <label htmlFor="landlord">Landlord’s Stroop account</label>
+          <label htmlFor="landlord">Landlord’s account ID</label>
           <div className="input-row">
             <input
               id="landlord"
@@ -117,7 +117,7 @@ function NewLeaseForm({ kp, collapsed, onCreated }: { kp: Keypair; collapsed: bo
             )}
           </div>
           <p className="field-hint" id="landlord-hint">
-            Your landlord copies it from their Stroop account. It starts with G.
+            Your landlord copies it from their Stroop landlord page and sends it to you.
           </p>
         </div>
 
@@ -164,7 +164,7 @@ function NewLeaseForm({ kp, collapsed, onCreated }: { kp: Keypair; collapsed: bo
             <input type="radio" name="mediator" checked={mediatorKind === 'stroop'} onChange={() => setMediatorKind('stroop')} />
             <span>
               <strong>{STROOP_DESK.name}</strong>
-              <span className="choice-sub">Default. A neutral reviewer from Stroop.</span>
+              <span className="choice-sub">Default. Stroop’s dispute team. They can only split the rent between you two.</span>
             </span>
           </label>
           <label className="choice">
@@ -177,7 +177,7 @@ function NewLeaseForm({ kp, collapsed, onCreated }: { kp: Keypair; collapsed: bo
         </div>
         {mediatorKind === 'custom' && (
           <div className="field">
-            <label htmlFor="mediator">Mediator’s Stellar account</label>
+            <label htmlFor="mediator">Mediator’s account ID</label>
             <input
               id="mediator"
               className="input mono"

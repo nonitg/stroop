@@ -4,7 +4,7 @@ import { fmtClock } from '../leaseText'
 
 export type MonthState = 'paid' | 'due' | 'locked' | 'refunded'
 
-const LABELS: Record<MonthState, string> = { paid: 'paid', due: 'due now', locked: 'locked', refunded: 'returned' }
+const LABELS: Record<MonthState, string> = { paid: 'paid', due: 'ready to pay out', locked: 'locked', refunded: 'returned' }
 
 export function monthStates(lease: Lease, now: number): MonthState[] {
   const dueTotal = lease.paidPeriods + periodsDue(lease, now)

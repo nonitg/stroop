@@ -1421,8 +1421,8 @@ details .form-section:first-of-type {
   color: var(--ink);
 }
 
-.lifecycle .current .lc-label {
-  font-weight: 500;
+.lifecycle .current {
+  color: var(--ink-2);
 }
 
 .countdown {

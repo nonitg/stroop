@@ -49,16 +49,16 @@ export function moneyTrail(l: Lease) {
   const feeHeld = l.start === 0 && l.status !== 'Refunded' && l.status !== 'Ended' ? fee : 0n
   const putIn = rentTotal + fee
   const paid = l.rent * BigInt(l.paidPeriods)
-  const locked = l.held + feeHeld
-  // Whatever isn't paid out, charged or still locked went back to the family.
-  const returned = putIn - paid - feeCharged - locked
+  const locked = l.held
+  // Whatever isn't paid out, charged, held as fee or still locked went back to the family.
+  const returned = putIn - paid - feeCharged - feeHeld - locked
   return { rentTotal, fee, feeCharged, feeHeld, putIn, paid, locked, returned: returned > 0n ? returned : 0n }
 }
 
-export function statusBadge(l: Lease, now: number): { label: string; tone: Tone } {
+export function statusBadge(l: Lease, now: number, role?: Role): { label: string; tone: Tone } {
   switch (l.status) {
     case 'Funded':
-      return { label: 'Waiting for landlord', tone: 'waiting' }
+      return { label: role === 'landlord' ? 'Waiting for you to accept' : 'Waiting for landlord', tone: 'waiting' }
     case 'Accepted':
       if (startsOnRelease(l, now)) return { label: 'Ready to start', tone: 'waiting' }
       if (l.handedOverAt > 0) return { label: 'Keys handed over', tone: 'waiting' }
@@ -116,8 +116,8 @@ export function nextStep(l: Lease, role: Role, me: string, now: number): string 
           ? 'No handover by the deadline. You can take everything back, fee included.'
           : 'The move-in deadline passed without a handover. The family can take the reserve back.'
       return family
-        ? `Accepted. Once you have the keys, confirm move-in: month 1 and the ${fee} fee are paid. No keys by ${fmtDate(l.moveInBy)}? Take everything back.`
-        : `Hand over the keys, then mark it here. The reserve can no longer be taken back, and after ${fmtDuration(disputeWindowSecs(l))} of silence the lease starts.`
+        ? `Accepted. Once you have the keys, confirm move-in: month 1 and the ${fee} fee are paid. No keys by ${fmtDate(l.moveInBy)}? Take everything back. If your landlord marks the keys handed over, you get ${fmtDuration(disputeWindowSecs(l))} to confirm or raise a dispute; if you say nothing, the lease starts.`
+        : `Hand over the keys, then mark it here. From then on the family can't take the rent back. They get ${fmtDuration(disputeWindowSecs(l))} to confirm or dispute; if they say nothing, the lease starts and you're paid.`
     }
     case 'Active':
       return family

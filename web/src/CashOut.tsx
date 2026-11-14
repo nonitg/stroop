@@ -6,7 +6,7 @@ import { OFF_RAMP_FEE, fmtMoney, offRampQuote, pct } from './money'
 
 type Phase = 'idle' | 'working' | 'open' | 'error'
 
-const STEPS = ['Find the off-ramp', 'Sign in with your Stroop account', 'Enter your bank details on their secure form']
+const STEPS = ['Connect to the cash-out service', 'Sign in with your Stroop account', 'Enter your bank details on their secure form']
 
 // Landlord withdraws received USDC to a Canadian bank through a Stellar anchor (the off-ramp).
 // The SEP-10 sign-in and SEP-24 form are real (SDF's test anchor); on testnet no money moves.
@@ -72,7 +72,7 @@ export function CashOut({ onClose, amount }: { onClose: () => void; amount: numb
           <dd>1 USDC = {fmtMoney(q.rate, 'CAD', { cents: true })}</dd>
         </div>
         <div>
-          <dt>Off-ramp fee, est. {pct(OFF_RAMP_FEE)}</dt>
+          <dt>Cash-out fee, est. {pct(OFF_RAMP_FEE)}</dt>
           <dd>−{fmtMoney(q.fee, 'CAD', { cents: true })}</dd>
         </div>
         <div className="quote-total">
@@ -110,14 +110,15 @@ export function CashOut({ onClose, amount }: { onClose: () => void; amount: numb
           <CircleAlert size={16} aria-hidden /> {error}
         </p>
       )}
-      {(phase === 'idle' || phase === 'error') && (
+      {amount === 0 && <p className="panel-status">Nothing to cash out yet. Rent lands here each month, starting at move-in.</p>}
+      {amount > 0 && (phase === 'idle' || phase === 'error') && (
         <button className="btn primary wide" onClick={start}>
-          {phase === 'error' ? 'Try again' : 'Continue to the off-ramp'} <ArrowUpRight size={16} aria-hidden />
+          {phase === 'error' ? 'Try again' : 'Continue to cash out'} <ArrowUpRight size={16} aria-hidden />
         </button>
       )}
       <p className="fine">
-        A licensed Canadian off-ramp turns USDC into dollars in your bank. Testnet: the sign-in and form are real, on SDF’s
-        test anchor ({ANCHOR_DOMAIN}), but no money moves. Rate and fee are estimates.
+        A licensed Canadian cash-out service turns USDC into dollars in your bank. In this demo the sign-in and bank form are
+        real, on the Stellar Foundation’s test service ({ANCHOR_DOMAIN}), but no money moves. Rate and fee are estimates.
       </p>
     </section>
   )

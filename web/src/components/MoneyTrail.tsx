@@ -22,6 +22,9 @@ export function MoneyTrail({ lease, role }: { lease: Lease; role: Role }) {
         ],
         ['Paid to your landlord', m.paid],
         [`Stroop fee, ${FEE_PCT}`, m.fee, fee.state],
+        ...(code === 'USD'
+          ? []
+          : ([['On-ramp fee, est.', `≈ ${fmtMoney(onRampQuote(fromUnits(m.putIn), code).fee, code)}`, 'Taken by the converter when the money left your bank']] as [string, string, string][])),
         ['Returned to you', m.returned],
         ['Still locked', m.locked],
       ]

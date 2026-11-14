@@ -11,7 +11,7 @@ const COPY: Record<Role, { title: string; lede: string; fee: string; steps: [str
   family: {
     title: 'Proof of rent, not prepayment.',
     lede: 'Lock a year of rent where your landlord can see it, without handing it over. They’re paid one month at a time; what isn’t owed yet stays yours.',
-    fee: 'You pay 1% of the rent, only after you move in. Landlords pay nothing.',
+    fee: 'Stroop charges 1% of the rent, only after you move in. Converting from your bank adds about 1% more, set by the on-ramp.',
     steps: [
       ['Lock the rent', 'Pay from your bank in your own currency. It’s converted to USDC and locked in a Stellar contract.'],
       ['Your landlord checks it', 'They open your proof link and see the money, live. No credit history needed.'],
@@ -21,7 +21,7 @@ const COPY: Record<Role, { title: string; lede: string; fee: string; steps: [str
   landlord: {
     title: 'See the rent before you hand over the keys.',
     lede: 'The family locks the whole lease up front. You verify it live, then it’s paid to you every month, on schedule.',
-    fee: 'Free for landlords. You keep 100% of the rent; the family pays Stroop’s 1%.',
+    fee: 'No Stroop fee for landlords: the family pays it. Cashing out to your bank costs about 0.5%, set by the off-ramp.',
     steps: [
       ['See the rent first', 'Open the family’s proof link: the full lease is locked before you commit.'],
       ['Accept, hand over keys', 'Once the keys are handed over, the money can’t be taken back.'],
