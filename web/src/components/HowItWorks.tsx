@@ -1,4 +1,4 @@
-import { CURRENCIES, LOCK_FEE_XLM, OFF_RAMP_FEE, ON_RAMP_FEE, fmtNetworkFee, pct } from '../money'
+import { ACTION_FEE_XLM, CURRENCIES, LOCK_FEE_XLM, OFF_RAMP_FEE, ON_RAMP_FEE, fmtNetworkFee, pct } from '../money'
 import { FEE_PCT } from '../leaseText'
 import { useHomeCurrency } from '../hooks'
 import { STROOP_DESK } from '../mediators'
@@ -14,7 +14,12 @@ const PATH: { node: string; sub: string; hop?: string }[] = [
 const FEES: [string, string, string, string][] = [
   ['Stroop fee', 'Family', `${FEE_PCT} of the rent locked`, 'Charged at move-in only. Refunded if move-in never happens.'],
   ['On-ramp', 'Family', `Est. ${pct(ON_RAMP_FEE)}, set by the licensed on-ramp`, 'When money is added from a bank.'],
-  ['Stellar network', 'Whoever acts', `${fmtNetworkFee(LOCK_FEE_XLM)} to lock`, 'Mostly to store the lease on Stellar. Monthly payouts cost far less.'],
+  [
+    'Stellar network',
+    'Whoever acts',
+    `${fmtNetworkFee(LOCK_FEE_XLM)} to lock; under ${ACTION_FEE_XLM} XLM per action after`,
+    'Locking stores the lease on Stellar. Accepting, moving in and monthly payouts cost under 1¢.',
+  ],
   ['Off-ramp', 'Landlord', `Est. ${pct(OFF_RAMP_FEE)}, set by the licensed off-ramp`, 'When cashing out to a Canadian bank.'],
   ['Anything else for landlords', 'Nobody', 'None', 'Landlords receive 100% of the rent.'],
 ]

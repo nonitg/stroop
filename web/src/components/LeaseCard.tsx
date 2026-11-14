@@ -105,10 +105,11 @@ export function LeaseCard(props: { lease: Lease; role: Role; kp: Keypair; onChan
       </p>
 
       <div className="lease-amount">
+        <p className="label">{role === 'family' ? 'Still locked' : 'Locked for you'}</p>
         <Money units={lease.held} className="amount-lg" />
         <p className="num">
-          {role === 'family' ? 'locked' : 'locked for you'} ·{' '}
-          <Money units={paidTotal} /> of <Money units={lease.rent * BigInt(lease.periods)} /> paid {role === 'family' ? 'to your landlord' : 'to you'}
+          <Money units={paidTotal} /> of <Money units={lease.rent * BigInt(lease.periods)} /> paid{' '}
+          {role === 'family' ? 'to your landlord' : 'to you'} so far
         </p>
       </div>
 

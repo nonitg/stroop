@@ -30,6 +30,8 @@ export const OFF_RAMP_FEE = 0.005
 export const XLM_USD = 0.4
 /** Measured on testnet: locking a lease costs ~0.18 XLM, mostly to store the lease record on Stellar. */
 export const LOCK_FEE_XLM = 0.18
+/** Measured on testnet: later actions (accept, move-in, monthly payout) cost under 0.001 XLM each. */
+export const ACTION_FEE_XLM = 0.001
 
 export const pct = (f: number) => `${+(f * 100).toFixed(2)}%`
 

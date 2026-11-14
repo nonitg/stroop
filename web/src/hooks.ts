@@ -139,17 +139,23 @@ export function useLeases(pub: string | undefined) {
 /** Total network fees (XLM) Stellar charged for these transactions; null until all are known. */
 export function useNetworkFees(hashes: string[]) {
   const [xlm, setXlm] = useState<number | null>(null)
+  const [attempt, setAttempt] = useState(0)
   const key = hashes.join(',')
   useEffect(() => {
     let live = true
+    let retry: ReturnType<typeof setTimeout> | undefined
     if (!key) return
     Promise.all(key.split(',').map(txFee))
       .then((fees) => live && setXlm(fees.reduce((a, b) => a + b, 0)))
-      .catch(() => live && setXlm(null))
+      // A just-sent transaction can take a few seconds to show up on Horizon.
+      .catch(() => {
+        if (live && attempt < 5) retry = setTimeout(() => setAttempt((n) => n + 1), 3000)
+      })
     return () => {
       live = false
+      clearTimeout(retry)
     }
-  }, [key])
+  }, [key, attempt])
   return key ? xlm : 0
 }
 

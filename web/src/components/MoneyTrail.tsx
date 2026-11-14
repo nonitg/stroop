@@ -49,9 +49,9 @@ export function MoneyTrail({ lease, role }: { lease: Lease; role: Role }) {
         ))}
         <div>
           <dt>
-            Network fees you’ve paid
+            Stellar network fees so far
             <span className="ledger-note">
-              {txs.length} {txs.length === 1 ? 'action' : 'actions'} from this browser, paid in XLM
+              {txs.length} {txs.length === 1 ? 'action' : 'actions'} on this lease, each paid in XLM by whoever took it
             </span>
           </dt>
           <dd>{networkXlm === null ? '…' : fmtNetworkFee(networkXlm)}</dd>
