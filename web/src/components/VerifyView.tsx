@@ -113,11 +113,11 @@ function LeaseProof({ id }: { id: number }) {
   const fee = feeLine(lease)
   const ago = checkedAt ? Math.max(0, Math.round(now - checkedAt / 1000)) : 0
   const rules: [LucideIcon, string, string][] = [
-    [CalendarClock, 'Paid monthly, never early', 'One month at a time, on schedule.'],
-    [LockKeyhole, 'Only to the landlord, or back to the family', 'Nobody, including Stroop, can send it anywhere else.'],
-    [Undo2, 'No keys, full refund', `If move-in isn't confirmed by ${fmtDate(lease.moveInBy)}, the family gets everything back.`],
-    [Handshake, 'Ending early takes both sides', 'Unused rent goes back to the family.'],
-    [Scale, 'Disputes go to a mediator', 'Who can only split the money between landlord and family.'],
+    [CalendarClock, 'Never paid early', 'One month at a time, on schedule.'],
+    [LockKeyhole, 'Only landlord or family', 'Nobody, including Stroop, can send it anywhere else.'],
+    [Undo2, 'No keys, full refund', `Move-in not confirmed by ${fmtDate(lease.moveInBy)}? Everything goes back.`],
+    [Handshake, 'Early exit takes both sides', 'Unused rent goes back to the family.'],
+    [Scale, 'A mediator can only split', 'Disputes are settled between landlord and family only.'],
   ]
 
   return (

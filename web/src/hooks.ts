@@ -18,15 +18,11 @@ function parseRoute(): Route {
 export function useRoute() {
   const [route, setRoute] = useState<Route>(parseRoute)
   useEffect(() => {
-    const on = () => {
-      const swap = () => {
-        flushSync(() => setRoute(parseRoute()))
+    const on = () =>
+      withTransition(() => {
+        setRoute(parseRoute())
         window.scrollTo(0, 0)
-      }
-      // Cross-fade between screens where the browser supports it.
-      if (document.startViewTransition && !reducedMotion()) document.startViewTransition(swap)
-      else swap()
-    }
+      })
     window.addEventListener('hashchange', on)
     return () => window.removeEventListener('hashchange', on)
   }, [])
@@ -38,6 +34,12 @@ export const verifyLink = (id: number) => `${window.location.origin}${window.loc
 // ---------- Shared hooks ----------
 
 export const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+
+/** Applies a state change as a cross-fade between screens where the browser supports it. */
+export function withTransition(update: () => void) {
+  if (!document.startViewTransition || reducedMotion()) return update()
+  document.startViewTransition(() => flushSync(update))
+}
 
 /** Eases a displayed number toward `target`, so balances visibly move when money moves. */
 export function useTween(target: number, ms = 900) {
@@ -96,9 +98,14 @@ export function useWallet(role: Role) {
     setError(null)
     try {
       const k = await setupWallet(role, setStep)
-      setKp(k)
-      setBalances(await getBalances(k.publicKey()))
-      setChecked(true)
+      const b = await getBalances(k.publicKey())
+      // The welcome screen fades into the dashboard.
+      withTransition(() => {
+        setKp(k)
+        setBalances(b)
+        setChecked(true)
+        setStep(null)
+      })
     } catch (e) {
       setError(explainError(e))
     } finally {

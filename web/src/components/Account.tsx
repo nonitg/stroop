@@ -1,6 +1,6 @@
 import { type CSSProperties, useState } from 'react'
 import { ArrowRight, Check, CircleAlert, Copy, LoaderCircle } from 'lucide-react'
-import { type Role, explorer, short } from '../stellar'
+import { type Role, explorer, fromUnits, short } from '../stellar'
 import type { Wallet } from '../hooks'
 import { Money } from './Money'
 import { useCopy } from './useCopy'
@@ -12,9 +12,9 @@ const SETUP_STEPS: { match: string; label: string; role?: Role }[] = [
   { match: 'Receiving', label: 'Add 20,000 test USDC', role: 'family' },
 ]
 
-const ROLE_COPY: Record<Role, { label: string; meta: string }> = {
-  family: { label: 'Family account', meta: 'About 15 seconds · comes with 20,000 test USDC' },
-  landlord: { label: 'Landlord account', meta: 'About 10 seconds · receives rent' },
+const ROLE_COPY: Record<Role, { label: string; meta: string; free: string; held: string }> = {
+  family: { label: 'Family account', meta: 'About 15 seconds · comes with 20,000 test USDC', free: 'Available', held: 'Locked in reserve' },
+  landlord: { label: 'Landlord account', meta: 'About 10 seconds · receives rent', free: 'Received', held: 'Locked for you' },
 }
 
 /** One button, then a three-step progress line while Stellar sets the account up. */
@@ -56,7 +56,7 @@ export function AccountSetup({ role, wallet }: { role: Role; wallet: Wallet }) {
   )
 }
 
-export function AccountSummary({ role, wallet }: { role: Role; wallet: Wallet }) {
+export function AccountSummary({ role, wallet, reserved }: { role: Role; wallet: Wallet; reserved: bigint }) {
   const copy = useCopy()
   const [copied, setCopied] = useState(false)
   if (!wallet.kp || !wallet.balances) return null
@@ -69,25 +69,51 @@ export function AccountSummary({ role, wallet }: { role: Role; wallet: Wallet })
   }
   return (
     <section className="account" aria-label={ROLE_COPY[role].label}>
-      <div className="account-main">
-        <span className="eyebrow">{ROLE_COPY[role].label}</span>
-        <p className="account-balance">
-          <Money units={usdc} />
-          <span className="unit">test USDC</span>
-        </p>
-      </div>
-      <div className="account-side">
-        <div className="address">
-          <a className="mono" href={explorer.account(pub)} target="_blank" rel="noreferrer" title="View on Stellar Expert">
-            {short(pub)}
-          </a>
-          <button className="icon-btn" onClick={copyAddress} aria-label="Copy account address">
-            {copied ? <Check size={15} className="pop" aria-hidden /> : <Copy size={15} aria-hidden />}
-          </button>
+      <div className="account-top">
+        <div className="account-main">
+          <span className="eyebrow">{ROLE_COPY[role].label}</span>
+          <p className="account-balance">
+            <Money units={usdc} />
+            <span className="unit">test USDC</span>
+          </p>
         </div>
-        <span className="fees num">{xlm.toLocaleString('en-US', { maximumFractionDigits: 0 })} XLM for fees</span>
+        <div className="account-side">
+          <div className="address">
+            <a className="mono" href={explorer.account(pub)} target="_blank" rel="noreferrer" title="View on Stellar Expert">
+              {short(pub)}
+            </a>
+            <button className="icon-btn" onClick={copyAddress} aria-label="Copy account address">
+              {copied ? <Check size={15} className="pop" aria-hidden /> : <Copy size={15} aria-hidden />}
+            </button>
+          </div>
+          <span className="fees num">{xlm.toLocaleString('en-US', { maximumFractionDigits: 0 })} XLM for fees</span>
+        </div>
       </div>
+      {reserved > 0n && <SplitBar role={role} free={usdc} held={fromUnits(reserved)} />}
     </section>
+  )
+}
+
+/** Where this account's money is: in hand, or locked in reserves (same glass as locked months). */
+function SplitBar({ role, free, held }: { role: Role; free: number; held: number }) {
+  const c = ROLE_COPY[role]
+  return (
+    <div className="split">
+      <div className="split-bar" aria-hidden>
+        <span className="split-free" style={{ flexGrow: free }} />
+        <span className="split-held" style={{ flexGrow: held }} />
+      </div>
+      <ul className="legend split-legend">
+        <li>
+          <span className="swatch paid" aria-hidden />
+          {c.free} <Money units={free} className="legend-n" />
+        </li>
+        <li>
+          <span className="swatch locked" aria-hidden />
+          {c.held} <Money units={held} className="legend-n" />
+        </li>
+      </ul>
+    </div>
   )
 }
 

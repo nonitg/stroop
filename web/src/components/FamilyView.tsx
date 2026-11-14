@@ -19,7 +19,7 @@ export function FamilyView() {
   const refreshAll = () => Promise.all([reload(), wallet.refresh()])
   if (wallet.checked && !wallet.balances) return <Hero role="family" wallet={wallet} />
   return (
-    <Dashboard role="family" wallet={wallet} count={leases?.length}>
+    <Dashboard role="family" wallet={wallet} leases={leases}>
       {wallet.kp && <LeaseList role="family" kp={wallet.kp} leases={leases} onChange={refreshAll} />}
       {wallet.kp && wallet.balances && leases && (
         <NewLeaseForm kp={wallet.kp} collapsed={leases.length > 0} onCreated={refreshAll} />

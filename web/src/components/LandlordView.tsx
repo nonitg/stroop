@@ -10,7 +10,7 @@ export function LandlordView() {
   const refreshAll = () => Promise.all([reload(), wallet.refresh()])
   if (wallet.checked && !wallet.balances) return <Hero role="landlord" wallet={wallet} />
   return (
-    <Dashboard role="landlord" wallet={wallet} count={leases?.length}>
+    <Dashboard role="landlord" wallet={wallet} leases={leases}>
       {wallet.kp && <LeaseList role="landlord" kp={wallet.kp} leases={leases} onChange={refreshAll} />}
       {leases?.length === 0 && (
         <section className="card empty">

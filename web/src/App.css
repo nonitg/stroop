@@ -188,7 +188,7 @@ main {
 }
 
 .money .cents {
-  color: color-mix(in srgb, currentColor 45%, transparent);
+  color: color-mix(in srgb, currentColor 60%, transparent);
 }
 
 .unit {
@@ -212,6 +212,12 @@ main {
 }
 
 /* Dark objects: the reserve itself, the proof seal band, protection moments, confirmations. */
+.on-dark :focus-visible,
+.toast :focus-visible,
+.note.protect :focus-visible {
+  outline-color: var(--mint);
+}
+
 .on-dark {
   color: #fff;
   background:
@@ -804,9 +810,9 @@ input[type='number']::-webkit-outer-spin-button {
 
 .setup-cta {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--s-3) var(--s-4);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-3);
 }
 
 .hint {
@@ -1062,16 +1068,53 @@ input[type='number']::-webkit-outer-spin-button {
 }
 
 .account {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  gap: var(--s-4) var(--s-6);
+  display: grid;
+  gap: var(--s-5);
   padding: var(--s-6) 28px;
   border-radius: var(--r-xl);
   background: var(--surface);
   border: 1px solid var(--line);
   box-shadow: var(--shadow-2);
+}
+
+.account-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--s-4) var(--s-6);
+}
+
+.split {
+  display: grid;
+  gap: 10px;
+}
+
+.split-bar {
+  display: flex;
+  gap: 3px;
+  height: 8px;
+}
+
+.split-bar > span {
+  min-width: 6px;
+  border-radius: 4px;
+  transition: flex-grow 900ms var(--ease);
+}
+
+.split-free {
+  background: var(--spruce);
+}
+
+.split-held {
+  background:
+    repeating-linear-gradient(-45deg, rgb(18 84 63 / 0.14) 0 1px, transparent 1px 5px),
+    var(--spruce-tint-2);
+}
+
+.split-legend .money {
+  font-weight: 600;
+  color: var(--ink);
 }
 
 .account-balance {
@@ -1225,7 +1268,7 @@ input[type='number']::-webkit-outer-spin-button {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
   gap: var(--s-4);
-  align-items: end;
+  align-items: start;
 }
 
 .fig dt {
@@ -1235,7 +1278,7 @@ input[type='number']::-webkit-outer-spin-button {
 }
 
 .fig dd {
-  margin-top: 2px;
+  margin-top: 4px;
   font-size: var(--t-lg);
   font-weight: 600;
   letter-spacing: -0.02em;
@@ -2344,6 +2387,12 @@ details.new-lease .lease-form {
   }
 }
 
+@media (max-width: 370px) {
+  .wordmark {
+    display: none;
+  }
+}
+
 @media (max-width: 640px) {
   .topbar-inner {
     grid-template-columns: auto minmax(0, 1fr);
@@ -2354,11 +2403,25 @@ details.new-lease .lease-form {
     justify-self: end;
   }
   .rolenav a {
-    padding: 6px 11px;
+    padding: 9px 10px;
+  }
+  .icon-btn,
+  .toast .icon-btn {
+    width: 40px;
+    height: 40px;
+  }
+  .address .icon-btn {
+    width: 36px;
+    height: 36px;
   }
   .nav-long,
-  .network,
-  .wordmark {
+  .network {
+    display: none;
+  }
+  .lease-meta {
+    flex-direction: column;
+  }
+  .lease-meta .sep {
     display: none;
   }
   .nav-short {
@@ -2388,14 +2451,54 @@ details.new-lease .lease-form {
     padding: var(--s-5);
     border-radius: 18px;
   }
-  .account {
+  .account-top {
     align-items: flex-start;
     flex-direction: column;
   }
   .account-side {
     justify-items: start;
   }
-  .account-balance {
+  .account-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--s-4) var(--s-6);
+}
+
+.split {
+  display: grid;
+  gap: 10px;
+}
+
+.split-bar {
+  display: flex;
+  gap: 3px;
+  height: 8px;
+}
+
+.split-bar > span {
+  min-width: 6px;
+  border-radius: 4px;
+  transition: flex-grow 900ms var(--ease);
+}
+
+.split-free {
+  background: var(--spruce);
+}
+
+.split-held {
+  background:
+    repeating-linear-gradient(-45deg, rgb(18 84 63 / 0.14) 0 1px, transparent 1px 5px),
+    var(--spruce-tint-2);
+}
+
+.split-legend .money {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.account-balance {
     font-size: 2.125rem;
   }
   .figures {

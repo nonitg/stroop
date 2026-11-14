@@ -102,7 +102,9 @@ export function LeaseCard(props: { lease: Lease; role: Role; kp: Keypair; onChan
           <p className="lease-meta num">
             {role === 'family' ? 'To' : 'From'} <span className="mono">{short(counterparty)}</span>
             <span className="sep" aria-hidden>·</span>
-            {FEE_PCT} fee {fee.amount}, {fee.state}
+            <span>
+              {FEE_PCT} fee {fee.amount}, {fee.state}
+            </span>
           </p>
         </div>
         <StatusBadge lease={lease} now={now} />
