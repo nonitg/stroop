@@ -61,15 +61,24 @@ Colour carries meaning, so there's one hue and neutrals.
 
 ## Screens
 
-**Family:** welcome (wire vs. lock risk bars) → your lease (form) → where your money goes (review) → locking (3-step progress) → locked + proof link → home, in these states: waiting for landlord · accepted · keys handed over · no keys by deadline · active · end-early request · paused · complete · refunded/ended → send to bank.
-Sheets: currency, mediator, confirm move-in, take it back, cancel, end early, report a problem.
+**Family:** welcome (wire vs. lock risk bars) → your lease (form) → where your money goes (review) → approve with your bank → locking (3-step progress) → locked + proof link → home, in these states: waiting for landlord · accepted ("Has Priya got the keys?") · keys handed over · no keys by deadline · active · end-early request · paused · complete · refunded/ended → send to bank. Every US$ amount on home also shows ≈ ₹.
+Sheets: currency, mediator, approve payment, confirm move-in, take it back, cancel, end early, report a problem.
 
-**Landlord:** messages (the proof link arrives in the chat where the family asked) → proof of rent page → accept with passkey → home, in these states: accepted · keys handed over · deadline passed · active · end-early request · paused · complete · refunded · ended → cash out → sent.
+**Landlord:** messages (the proof link arrives in the chat where the family asked) → proof of rent page (four facts; the cash-out fee is shown here, not hidden until cash out) → accept with passkey + bank account → home, in these states: accepted · keys handed over · deadline passed · active · end-early request · paused · complete · refunded · ended → cash out → sent (with an arrival estimate). Automatic cash-out on each rent day is a switch.
 Sheets: sign up, keys handed over, early collection blocked, end early, report a problem.
+
+## Persona findings that shaped it
+
+Two persona testers ran the flow, a parent in Pune and a landlord in Waterloo, and then re-tested after fixes.
+- **Refunds have to state what's lost.** "It all comes back" was untrue once the exchange fees are counted, so every refund now shows the rupees that actually land.
+- **Name who acts.** "I've got the keys" confused a parent who is abroad. The button now reads "Priya has moved in".
+- **A fake landlord can't collect by marking the keys handed over.** The family gets 3 days to object, and the screen says so.
+- **Landlords look for the catch.** "Cost to you: Free" hid the 0.5% cash-out fee. The proof page now shows "≈ C$1,393 after a 0.5% cash-out fee (C$7)".
+- **Jargon costs trust.** "Contract", "public on Stellar" and "try it" are gone from the user screens. Users see "lease rules", "receipt" and "checked just now".
 
 ## Copy rules
 
-- The user's words: "lock", "locked", "paid to Sam", "back to you", "fee", "exchange". "USDC" appears nowhere. "Stellar" appears only where it proves something ("Live from Stellar · View record").
+- The user's words: "lock", "locked", "paid to Sam", "back to you", "fee", "currency exchange", "lease rules". "USDC" and "contract" appear nowhere on user screens. "Stellar" appears only where it proves something (the "View record" link, the network-fee line).
 - Numbers do the talking. Each amount appears once per screen, in the currency the person thinks in: rupees on the way in, US$ in the middle, C$ on the way out.
 - Name people, not roles ("Sam accepted", "Priya's family"), and use no gendered pronouns.
 

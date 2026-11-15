@@ -1050,7 +1050,7 @@ function renderVault() {
       <div class="col center"><div class="stack">${centerStack}</div><div class="col-foot"><b>${usd(w.locked + w.feeHeld)}</b><span>Locked</span></div></div>
       <div class="col"><div class="stack">${blocks(l.paid, 'paid', 'in-r', paidNew)}</div><div class="col-foot"><b>${usd(w.paid)}</b><span>With the landlord</span></div></div>
     </div>
-    <p class="v-rule">Neither side holds it. The contract pays one month on each rent day and nothing early.</p>
+    <p class="v-rule">Neither side holds it. One month goes to the landlord on each rent day, never early.</p>
     <div class="demo">${demo}</div>
     ${fees}`
 }
