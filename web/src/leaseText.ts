@@ -3,7 +3,7 @@ import {
   type Lease,
   type Role,
   disputeWindowSecs,
-  feeFor,
+  leaseFee,
   fmtUSD,
   proposalOpen,
   proposalWindowSecs,
@@ -29,7 +29,7 @@ export const inDisputeWindow = (l: Lease, now: number) =>
 
 /** The fee is a fixed share of the rent; the contract pays it out at move-in or refunds it. */
 export function feeLine(l: Lease): { amount: string; state: string } {
-  const amount = fmtUSD(feeFor(l.rent * BigInt(l.periods)))
+  const amount = fmtUSD(leaseFee(l))
   if (l.start > 0) return { amount, state: 'paid at move-in' }
   if (l.status === 'Refunded' || l.status === 'Ended') return { amount, state: 'refunded' }
   return { amount, state: 'held until move-in' }
@@ -38,15 +38,17 @@ export function feeLine(l: Lease): { amount: string; state: string } {
 /** Where every unit of a lease's money is right now. */
 export function moneyTrail(l: Lease) {
   const rentTotal = l.rent * BigInt(l.periods)
-  const fee = feeFor(rentTotal)
+  const fee = leaseFee(l)
   const feeCharged = l.start > 0 ? fee : 0n
   const feeHeld = l.start === 0 && l.status !== 'Refunded' && l.status !== 'Ended' ? fee : 0n
   const putIn = rentTotal + fee
   const paid = l.rent * BigInt(l.paidPeriods)
   const locked = l.held
+  // Lent rent is still the lease's money; it's just out earning for Stroop until it's needed.
+  const lent = l.lent
   // Whatever isn't paid out, charged, held as fee or still locked went back to the family.
   const returned = putIn - paid - feeCharged - feeHeld - locked
-  return { rentTotal, fee, feeCharged, feeHeld, putIn, paid, locked, returned: returned > 0n ? returned : 0n }
+  return { rentTotal, fee, feeCharged, feeHeld, putIn, paid, locked, lent, returned: returned > 0n ? returned : 0n }
 }
 
 export type Mood = 'you' | 'wait' | 'good' | 'stop'

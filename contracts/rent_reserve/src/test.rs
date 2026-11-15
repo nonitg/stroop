@@ -346,15 +346,20 @@ fn lending_keeps_three_months_in_cash_and_pays_every_month() {
 fn cover_fund_makes_up_a_lending_loss() {
     let s = setup();
     let id = lending_lease(&s, 2 * RENT);
-    vault(&s).simulate_loss(&(RENT + RENT / 2));
+    // Pool loses 10% of the 8 months lent.
+    vault(&s).simulate_loss(&1_000);
+
+    advance(&s.env, MONTH);
+    s.client.release(&id);
+    assert_eq!(s.client.get_lease(&id).covered, RENT / 10);
 
     advance(&s.env, MONTH * 20);
     s.client.release(&id);
     let l = s.client.get_lease(&id);
     assert_eq!(l.status, Status::Completed);
-    assert_eq!(l.covered, RENT + RENT / 2);
+    assert_eq!(l.covered, RENT * 8 / 10);
     assert_eq!(s.usdc.balance(&s.landlord), TOTAL);
-    assert_eq!(s.client.cover_status(), (RENT / 2, 0));
+    assert_eq!(s.client.cover_status(), (2 * RENT - RENT * 8 / 10, 0));
 }
 
 #[test]

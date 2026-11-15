@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Lease } from './stellar'
-import { headline } from './leaseText'
+import { headline, moneyTrail } from './leaseText'
 import { parseRoute } from './hooks'
 
 const base: Lease = {
@@ -21,6 +21,9 @@ const base: Lease = {
   landlordOwed: 0n,
   status: 'Funded',
   endProposedAt: 0,
+  lend: false,
+  lent: 0n,
+  covered: 0n,
 }
 
 describe('headline', () => {
@@ -41,5 +44,15 @@ describe('parseRoute', () => {
     expect(parseRoute('#/new/GABC')).toEqual({ view: 'new', to: 'GABC' })
     expect(parseRoute('#/landlord')).toEqual({ view: 'home', role: 'landlord' })
     expect(parseRoute('')).toEqual({ view: 'home' })
+  })
+})
+
+describe('moneyTrail', () => {
+  it('counts lent rent as still locked', () => {
+    const t = moneyTrail({ ...base, status: 'Active', start: 1, paidPeriods: 1, held: 11000_0000000n, fee: 70_0000000n, lend: true, lent: 8000_0000000n })
+    expect(t.locked).toBe(11000_0000000n)
+    expect(t.lent).toBe(8000_0000000n)
+    expect(t.feeCharged).toBe(70_0000000n)
+    expect(t.returned).toBe(0n)
   })
 })

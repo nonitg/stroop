@@ -45,7 +45,7 @@ impl DemoVault {
         set_total(&env, total(&env) + amount);
     }
 
-    /// Returns `amount` of `from`'s principal, or whatever is left if the pool lost money.
+    /// Returns `amount` of `from`'s principal, or its pro-rata share if the pool lost money.
     pub fn withdraw(env: Env, from: Address, amount: i128) -> i128 {
         from.require_auth();
         let mine = owed(&env, &from);
@@ -53,7 +53,9 @@ impl DemoVault {
             panic_with_error!(&env, Error::InvalidAmount);
         }
         let t = token(&env);
-        let out = amount.min(t.balance(&env.current_contract_address()));
+        let all = total(&env);
+        let have = t.balance(&env.current_contract_address()).min(all);
+        let out = amount * have / all;
         if out > 0 {
             t.transfer(&env.current_contract_address(), &from, &out);
         }
@@ -81,11 +83,11 @@ impl DemoVault {
         amount
     }
 
-    /// Testnet demo only: the pool loses `amount` (sent to the admin), as if a borrower defaulted.
-    /// Open to anyone so the demo app can trigger it; the tokens have no value.
-    pub fn simulate_loss(env: Env, amount: i128) -> i128 {
+    /// Testnet demo only: the pool loses `bps` of what it holds (sent to the admin), as if
+    /// borrowers defaulted. Open to anyone so the demo app can trigger it; the tokens have no value.
+    pub fn simulate_loss(env: Env, bps: i128) -> i128 {
         let t = token(&env);
-        let out = amount.min(t.balance(&env.current_contract_address()));
+        let out = t.balance(&env.current_contract_address()) * bps.clamp(0, 10_000) / 10_000;
         if out > 0 {
             t.transfer(&env.current_contract_address(), &admin(&env), &out);
         }

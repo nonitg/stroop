@@ -2,13 +2,21 @@ import type { CSSProperties } from 'react'
 import { Check } from 'lucide-react'
 import { type Lease, periodsDue, secsToNextRelease } from '../stellar'
 
-type MonthState = 'paid' | 'due' | 'locked' | 'refunded'
-const SAY: Record<MonthState, string> = { paid: 'paid', due: 'ready to collect', locked: 'locked', refunded: 'returned' }
+type MonthState = 'paid' | 'due' | 'locked' | 'lent' | 'refunded'
+const SAY: Record<MonthState, string> = {
+  paid: 'paid',
+  due: 'ready to collect',
+  locked: 'locked',
+  lent: 'locked, lent out',
+  refunded: 'returned',
+}
 
 function monthStates(l: Lease, now: number): MonthState[] {
   const dueTotal = l.paidPeriods + periodsDue(l, now)
+  // Lending always takes the furthest-out months.
+  const lentFrom = l.periods - Math.round(Number(l.lent) / Number(l.rent))
   return Array.from({ length: l.periods }, (_, i) =>
-    i < l.paidPeriods ? 'paid' : i < dueTotal ? 'due' : l.held === 0n ? 'refunded' : 'locked',
+    i < l.paidPeriods ? 'paid' : i < dueTotal ? 'due' : l.held === 0n ? 'refunded' : i >= lentFrom ? 'lent' : 'locked',
   )
 }
 

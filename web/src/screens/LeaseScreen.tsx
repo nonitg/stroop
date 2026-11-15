@@ -1,5 +1,15 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeft, ArrowUpRight, ChevronRight, LoaderCircle, LockKeyhole, ReceiptText, Share, ShieldCheck } from 'lucide-react'
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  ChevronRight,
+  HandCoins,
+  LoaderCircle,
+  LockKeyhole,
+  ReceiptText,
+  Share,
+  ShieldCheck,
+} from 'lucide-react'
 import { useApp } from '../app'
 import {
   CONTRACTS,
@@ -8,12 +18,13 @@ import {
   disputeWindowSecs,
   explainError,
   explorer,
-  feeFor,
+  leaseFee,
   fmtUSD,
   getKeypair,
   logTx,
   periodsDue,
   short,
+  simulatePoolLoss,
   txsFor,
 } from '../stellar'
 import { useHomeCurrency, useLease, useNow, verifyLink } from '../hooks'
@@ -23,6 +34,7 @@ import { mediatorName } from '../mediators'
 import { type Action, leaseActions } from '../components/leaseActions'
 import { useToast } from '../components/useToast'
 import { Amount } from '../ui/Amount'
+import { LendingSheet } from '../ui/LendingSheet'
 import { Ledger, MoneyBar } from '../ui/MoneyBar'
 import { MonthTiles } from '../ui/MonthTiles'
 import { Sheet } from '../ui/Sheet'
@@ -60,7 +72,7 @@ export function LeaseScreen({ id }: { id: number }) {
 }
 
 const isNothingDue = (e: unknown) => /Error\(Contract, #6\)/.test(e instanceof Error ? e.message : String(e))
-const NEEDS_CONFIRM = new Set(['accept', 'hand-over', 'move-in', 'cancel', 'reclaim', 'end', 'dispute'])
+const NEEDS_CONFIRM = new Set(['accept', 'hand-over', 'move-in', 'cancel', 'reclaim', 'end', 'dispute', 'stop-lending'])
 
 function LeaseDetail({ lease, role, onChange }: { lease: Lease; role: Role; onChange: () => Promise<unknown> }) {
   const { wallet } = useApp()
@@ -74,12 +86,14 @@ function LeaseDetail({ lease, role, onChange }: { lease: Lease; role: Role; onCh
   const [confirm, setConfirm] = useState<Action | null>(null)
   const [blockedAt, setBlockedAt] = useState<number | null>(null)
   const [shake, setShake] = useState(false)
+  const [lendInfo, setLendInfo] = useState(false)
   const family = role === 'family'
   const h = headline(lease, role, kp.publicKey(), now)
   const actions = leaseActions(lease, role, kp, now)
   const primary = actions.find((a) => a.tier === 'primary')
   const secondary = actions.filter((a) => a.tier === 'secondary')
-  const quiet = actions.filter((a) => a.tier === 'quiet')
+  const stopLending = actions.find((a) => a.id === 'stop-lending')
+  const quiet = actions.filter((a) => a.tier === 'quiet' && a !== stopLending)
   const slices = leaseSlices(lease, role)
   const total = slices.reduce((s, x) => s + x.value, 0)
   const txs = txsFor(lease.id)
@@ -207,6 +221,12 @@ function LeaseDetail({ lease, role, onChange }: { lease: Lease; role: Role; onCh
               slices={slices.filter((s) => s.value > 0)}
               total={{ label: family ? 'You put in' : 'Lease total', amount: fmtUSD(BigInt(Math.round(total * 1e7))) }}
             />
+            {lease.covered > 0n && (
+              <p className="callout good" style={{ marginTop: 12 }}>
+                <ShieldCheck size={17} aria-hidden />
+                <span>Lending came back {fmtUSD(lease.covered)} short. Stroop paid it, so the lease is whole.</span>
+              </p>
+            )}
           </section>
 
           <h2 className="section-title">Details</h2>
@@ -248,6 +268,20 @@ function LeaseDetail({ lease, role, onChange }: { lease: Lease; role: Role; onCh
                 </button>
               </li>
             ))}
+            {lease.lend && (
+              <li>
+                <button className="row" onClick={() => setLendInfo(true)}>
+                  <span className="ico locked">
+                    <HandCoins size={18} aria-hidden />
+                  </span>
+                  <span className="txt">
+                    <strong>Lending is on</strong>
+                    <span>{lease.lent > 0n ? `${fmtUSD(lease.lent)} lent · Stroop covers any loss` : 'Nothing lent right now'}</span>
+                  </span>
+                  <ChevronRight className="chev" size={18} aria-hidden />
+                </button>
+              </li>
+            )}
             <li>
               <a className="row" href={`#/proof/${lease.id}`}>
                 <span className="ico">
@@ -304,6 +338,42 @@ function LeaseDetail({ lease, role, onChange }: { lease: Lease; role: Role; onCh
         </div>
       </div>
 
+      <LendingSheet open={lendInfo} onClose={() => setLendInfo(false)}>
+        {stopLending && (
+          <div className="actions">
+            <button
+              className="btn secondary"
+              onClick={() => {
+                setLendInfo(false)
+                pick(stopLending)
+              }}
+              disabled={!!busy}
+            >
+              Stop lending
+            </button>
+          </div>
+        )}
+        {lease.lent > 0n && (
+          <button
+            className="link-btn"
+            disabled={!!busy}
+            onClick={() => {
+              setLendInfo(false)
+              run({
+                id: 'pool-loss',
+                label: 'Demo: pool loses 10%',
+                done: 'Pool lost 10%',
+                doneBody: 'Stroop pays the gap when the rent comes back.',
+                tier: 'quiet',
+                run: () => simulatePoolLoss(kp, 1000),
+              })
+            }}
+          >
+            Testnet demo: make the pool lose 10%
+          </button>
+        )}
+      </LendingSheet>
+
       {confirm && (
         <ConfirmSheet
           action={confirm}
@@ -329,7 +399,7 @@ function ConfirmSheet(props: {
 }) {
   const { action: a, lease: l, now, onClose, onConfirm } = props
   const rent = fmtUSD(l.rent)
-  const fee = feeFor(l.rent * BigInt(l.periods))
+  const fee = leaseFee(l)
   const owed = l.rent * BigInt(periodsDue(l, now))
   const [code] = useHomeCurrency()
   // Refunds land in US$; sending them home costs another exchange, so show what actually arrives.
@@ -388,6 +458,13 @@ function ConfirmSheet(props: {
             ['Back to the family', fmtUSD(l.held - owed)],
           ],
           cta: l.endProposedBy ? 'Agree and end' : 'Send request',
+        }
+      case 'stop-lending':
+        return {
+          title: 'Stop lending?',
+          lede: 'Lent rent comes back to the lease now. Your fee doesn’t change.',
+          rows: l.lent > 0n ? [['Comes back', fmtUSD(l.lent)]] : [],
+          cta: 'Stop lending',
         }
       case 'dispute':
         return {

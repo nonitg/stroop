@@ -1,8 +1,20 @@
 import { type ReactNode, useState } from 'react'
 import { StrKey } from '@stellar/stellar-sdk'
-import { ArrowLeft, Check, ChevronRight, LoaderCircle, LockKeyhole, Minus, Plus, Share, Sparkles, X } from 'lucide-react'
+import { ArrowLeft, Check, ChevronRight, HandCoins, LoaderCircle, LockKeyhole, Minus, Plus, Share, Sparkles, X } from 'lucide-react'
 import { useApp } from '../app'
-import { explainError, feeFor, fmtUSD, fromUnits, getKeypair, logTx, reserve, setupWallet, toUnits } from '../stellar'
+import {
+  LEND_DISCOUNT,
+  MIN_LEND_MONTHS,
+  explainError,
+  feeFor,
+  fmtUSD,
+  fromUnits,
+  getKeypair,
+  logTx,
+  reserve,
+  setupWallet,
+  toUnits,
+} from '../stellar'
 import { LOCK_FEE_XLM, ON_RAMP_FEE, XLM_USD, currency, fmtMoney, onRampQuote } from '../money'
 import { STROOP_DESK, mediatorName, mediatorProblem } from '../mediators'
 import { go, useHomeCurrency, verifyLink } from '../hooks'
@@ -10,6 +22,7 @@ import { useToast } from '../components/useToast'
 import { Ledger, MoneyBar, type Slice } from '../ui/MoneyBar'
 import { Sheet } from '../ui/Sheet'
 import { CurrencySheet } from '../ui/CurrencySheet'
+import { LendingSheet } from '../ui/LendingSheet'
 import { useShare } from '../ui/share'
 import { AddMoneySheet, Problem } from './MoneySheets'
 
@@ -27,14 +40,17 @@ export function NewLease({ to }: { to?: string }) {
   const [months, setMonths] = useState(12)
   const [mediator, setMediator] = useState(STROOP_DESK.address)
   const [code, setCode] = useHomeCurrency()
-  const [sheet, setSheet] = useState<'currency' | 'mediator' | 'add' | null>(null)
+  const [sheet, setSheet] = useState<'currency' | 'mediator' | 'add' | 'lend' | null>(null)
+  const [lendChoice, setLendChoice] = useState(false)
   const [busy, setBusy] = useState<'demo' | 'lock' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [created, setCreated] = useState<number | null>(null)
 
   const rentNum = Math.max(0, Number(rent) || 0)
+  const canLend = months >= MIN_LEND_MONTHS
+  const lend = lendChoice && canLend
   const rentTotal = toUnits(rentNum * months)
-  const fee = feeFor(rentTotal)
+  const fee = feeFor(rentTotal, lend)
   const lockUnits = rentTotal + fee
   const landlordOk = StrKey.isValidEd25519PublicKey(landlord.trim()) && landlord.trim() !== kp.publicKey()
   const balance = wallet.balances?.usdc ?? 0
@@ -58,7 +74,7 @@ export function NewLease({ to }: { to?: string }) {
     setError(null)
     const t0 = performance.now()
     try {
-      const { result, hash } = await reserve.create(kp, landlord.trim(), mediator, rentNum, months)
+      const { result, hash } = await reserve.create(kp, landlord.trim(), mediator, rentNum, months, lend)
       const id = Number(result)
       if (hash) logTx({ leaseId: id, label: 'Rent locked', hash, at: Date.now() })
       toast({
@@ -218,6 +234,9 @@ export function NewLease({ to }: { to?: string }) {
           months={months}
           code={code}
           mediator={mediator}
+          lend={lend}
+          canLend={canLend}
+          onLend={() => (lend ? setLendChoice(false) : setSheet('lend'))}
           onMediator={() => setSheet('mediator')}
           onCurrency={() => setSheet('currency')}
         >
@@ -230,7 +249,7 @@ export function NewLease({ to }: { to?: string }) {
                 ) : (
                   <LockKeyhole size={18} aria-hidden />
                 )}
-                {busy === 'lock' ? 'Locking on Stellar…' : `Lock ${fmtMoney(quoteLease(rentNum, months, code).pay, code)}`}
+                {busy === 'lock' ? 'Locking on Stellar…' : `Lock ${fmtMoney(quoteLease(rentNum, months, code, lend).pay, code)}`}
               </button>
             ) : (
               <button className="btn primary wide" onClick={() => setSheet('add')}>
@@ -244,6 +263,14 @@ export function NewLease({ to }: { to?: string }) {
         </Review>
       )}
 
+      <LendingSheet
+        open={sheet === 'lend'}
+        onClose={() => setSheet(null)}
+        onAccept={() => {
+          setLendChoice(true)
+          setSheet(null)
+        }}
+      />
       <CurrencySheet open={sheet === 'currency'} onClose={() => setSheet(null)} value={code} onChange={setCode} />
       <MediatorSheet
         open={sheet === 'mediator'}
@@ -259,9 +286,9 @@ export function NewLease({ to }: { to?: string }) {
 }
 
 /** What leaves the family's bank for this lease, split by who keeps each part, in their own currency. */
-function quoteLease(rent: number, months: number, code: string) {
+function quoteLease(rent: number, months: number, code: string, lend: boolean) {
   const usdRent = rent * months
-  const usdFee = fromUnits(feeFor(toUnits(usdRent)))
+  const usdFee = fromUnits(feeFor(toUnits(usdRent), lend))
   const usdNet = LOCK_FEE_XLM * XLM_USD
   const q = onRampQuote(usdRent + usdFee, code)
   const perUsd = q.rate
@@ -275,7 +302,13 @@ function quoteLease(rent: number, months: number, code: string) {
       who: `Locked, paid to your landlord monthly`,
       amount: local(usdRent * perUsd),
     },
-    { tone: 'fee', value: usdFee * perUsd, label: 'Stroop fee · 1%', who: 'Only if you move in', amount: local(usdFee * perUsd) },
+    {
+      tone: 'fee',
+      value: usdFee * perUsd,
+      label: lend ? `Stroop fee · 1% − ${fmtUSD(LEND_DISCOUNT)}` : 'Stroop fee · 1%',
+      who: 'Only if you move in',
+      amount: local(usdFee * perUsd),
+    },
   ]
   if (q.fee > 0)
     slices.push({
@@ -301,12 +334,15 @@ function Review(props: {
   months: number
   code: string
   mediator: string
+  lend: boolean
+  canLend: boolean
+  onLend: () => void
   onMediator: () => void
   onCurrency: () => void
   children: ReactNode
 }) {
-  const { rent, months, code, mediator, onMediator, onCurrency, children } = props
-  const { slices, pay, perUsd, ofHundred } = quoteLease(rent, months, code)
+  const { rent, months, code, mediator, lend, canLend, onLend, onMediator, onCurrency, children } = props
+  const { slices, pay, perUsd, ofHundred } = quoteLease(rent, months, code, lend)
   const local = (n: number) => fmtMoney(n, code)
   return (
     <>
@@ -331,6 +367,20 @@ function Review(props: {
         </p>
       </section>
       <ul className="list glass" style={{ marginTop: 14 }}>
+        {canLend && (
+          <li>
+            <button className="row" onClick={onLend} role="switch" aria-checked={lend}>
+              <span className="ico locked">
+                <HandCoins size={18} aria-hidden />
+              </span>
+              <span className="txt">
+                <strong>Save {fmtUSD(LEND_DISCOUNT)}</strong>
+                <span>{lend ? 'On · Stroop covers any loss' : 'Let Stroop lend months you won’t need yet'}</span>
+              </span>
+              <span className="switch" aria-hidden />
+            </button>
+          </li>
+        )}
         <li>
           <button className="row" onClick={onMediator}>
             <span className="txt">

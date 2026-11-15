@@ -1,10 +1,11 @@
 import { ArrowLeft, ArrowUpRight, BadgeCheck, LoaderCircle } from 'lucide-react'
-import { CONTRACTS, explorer, fmtUSD } from '../stellar'
+import { CASH_MONTHS, CONTRACTS, explorer, fmtUSD } from '../stellar'
 import { useLease, useNow } from '../hooks'
 import { fmtDate, headline } from '../leaseText'
 import { fmtMoney, offRampQuote } from '../money'
 import { mediatorName } from '../mediators'
 import { Amount } from '../ui/Amount'
+import { useCover } from '../ui/LendingSheet'
 import { Brand } from '../ui/BrandMark'
 import { MonthTiles } from '../ui/MonthTiles'
 import { Status } from '../ui/Status'
@@ -14,6 +15,7 @@ import { Problem } from './MoneySheets'
 export function Proof({ id, back }: { id: number; back?: boolean }) {
   const { lease, error } = useLease(id)
   const now = useNow()
+  const cover = useCover()
   const top = (
     <div className="top">
       {back ? (
@@ -77,6 +79,18 @@ export function Proof({ id, back }: { id: number; back?: boolean }) {
           <dt>Term</dt>
           <dd>{lease.periods} months</dd>
         </div>
+        {lease.lend && (
+          <div>
+            <dt>Later months</dt>
+            <dd>
+              Tenant chose lending
+              <small>
+                Next {CASH_MONTHS} months always stay here. Stroop covers any loss
+                {cover && ` · cover fund ${fmtUSD(cover.cover)}`}
+              </small>
+            </dd>
+          </div>
+        )}
         <div>
           <dt>Paid so far</dt>
           <dd>{fmtUSD(lease.rent * BigInt(lease.paidPeriods))}</dd>

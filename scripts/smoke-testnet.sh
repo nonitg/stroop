@@ -35,7 +35,7 @@ echo "cover fund, total lent: $(inv --id $C --source smoke-payer-$RUN -- cover_s
 if inv --id $C --source smoke-landlord-$RUN -- release --id $ID >/dev/null; then echo "FAIL: early release allowed"; exit 1; else echo "early release blocked (expected)"; fi
 echo "waiting 65s for next period..."; sleep 65
 inv --id $C --source smoke-landlord-$RUN -- release --id $ID && echo "landlord: $(bal $L)"
-inv --id $VAULT --source smoke-payer-$RUN -- simulate_loss --amount 500000000 >/dev/null && echo "vault lost 50 USDC"
+inv --id $VAULT --source smoke-payer-$RUN -- simulate_loss --bps 1000 >/dev/null && echo "vault lost 10%"
 inv --id $C --source smoke-landlord-$RUN -- end_early --id $ID --caller $L >/dev/null && echo "landlord proposed end"
 inv --id $C --source smoke-payer-$RUN -- end_early --id $ID --caller $P && echo "payer agreed; payer: $(bal $P), landlord: $(bal $L)"
 inv --id $C --source smoke-payer-$RUN -- get_lease --id $ID
