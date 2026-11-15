@@ -1,0 +1,1199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stroop · clickable prototype</title>
+<meta name="description" content="Stroop prototype: the family and the landlord side by side, with the money shown in the middle at every step.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400..800&display=swap">
+<style>
+/* ---------- Tokens ----------
+   One hue carries meaning: syrup = money Stroop is holding. Ink = money paid out. Green = money back to the family.
+   Hatching = fees kept by partners. Everything else is neutral so the money reads first. */
+:root {
+  --bg: #F1F0EB;
+  --paper: #FFFFFF;
+  --tint: #F7F6F2;
+  --ink: #16171B;
+  --ink-2: #53565D;
+  --ink-3: #6B6E75;
+  --line: #E7E5DF;
+  --line-2: #D5D2CA;
+  --syrup: #E8912A;
+  --syrup-soft: #FCEBD2;
+  --syrup-line: #F0CF9E;
+  --syrup-ink: #8A4B00;
+  --back: #2B7A54;
+  --back-soft: #E2F1E8;
+  --danger: #B42318;
+  --danger-soft: #FCEBE9;
+  --hatch: repeating-linear-gradient(135deg, #B7B3AA 0 2px, #DEDBD3 2px 5px);
+  --r: 14px;
+  --pw: 372px;
+  --ph: min(790px, calc(100vh - 128px));
+  --ease: cubic-bezier(.2, .8, .2, 1);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.45 'Schibsted Grotesk', ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+button { font: inherit; color: inherit; }
+.num { font-variant-numeric: lining-nums; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+:focus-visible { outline: 3px solid #2F6FEB; outline-offset: 2px; border-radius: 6px; }
+svg.i { width: 20px; height: 20px; flex: none; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---------- Stage (desktop): family phone | the money | landlord phone ---------- */
+.top {
+  display: flex; align-items: center; gap: 16px;
+  max-width: 1240px; margin: 0 auto; padding: 18px 24px 8px;
+}
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 21px; letter-spacing: -.02em; }
+.brand svg { width: 22px; height: 22px; }
+.top-note { color: var(--ink-2); font-size: 14px; }
+.top-note b { color: var(--ink); font-weight: 600; }
+.top .spacer { flex: 1; }
+.chip-btn {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px;
+  border-radius: 999px; border: 1.5px solid var(--line-2); background: var(--paper); cursor: pointer; font-weight: 600; font-size: 14px;
+}
+.chip-btn:hover { border-color: var(--ink-3); }
+.chip-btn svg.i { width: 16px; height: 16px; }
+
+.stage {
+  display: grid; grid-template-columns: var(--pw) minmax(250px, 300px) var(--pw);
+  justify-content: center; align-items: start; gap: 36px;
+  padding: 8px 24px 32px;
+}
+.side-label {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  height: 36px; padding: 0 6px; font-size: 14px; color: var(--ink-2);
+}
+.side-label strong { color: var(--ink); font-weight: 700; }
+.next-pill {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+  background: var(--ink); color: #fff; font-size: 12.5px; font-weight: 600;
+}
+.next-pill::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--syrup); animation: pulse 1.6s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+/* ---------- Phone ---------- */
+.phone {
+  width: var(--pw); height: var(--ph); padding: 8px; border-radius: 48px;
+  background: #101114; box-shadow: 0 30px 60px -30px rgba(20, 20, 25, .45), 0 0 0 1px #2A2B30 inset;
+}
+.screen {
+  position: relative; height: 100%; border-radius: 40px; overflow: hidden;
+  background: var(--paper); display: flex; flex-direction: column;
+}
+.sbar {
+  flex: none; height: 44px; display: flex; align-items: center; justify-content: space-between;
+  padding: 4px 30px 0; font-size: 13px; font-weight: 700;
+}
+.sbar span:last-child { font-weight: 500; color: var(--ink-2); }
+.ahead { flex: none; display: flex; align-items: center; gap: 6px; min-height: 52px; padding: 2px 12px 6px 16px; }
+.ahead .title { font-weight: 700; font-size: 16px; flex: 1; }
+.ahead .brand { font-size: 18px; flex: 1; }
+.ahead .brand svg { width: 18px; height: 18px; }
+.icon-btn {
+  width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; border: 0; background: none; cursor: pointer;
+}
+.icon-btn:hover { background: var(--tint); }
+.who { font-size: 13px; font-weight: 600; color: var(--ink-2); padding: 6px 10px; border-radius: 999px; background: var(--tint); }
+.scroll { flex: 1; overflow-y: auto; padding: 4px 20px 24px; scrollbar-width: none; }
+.scroll::-webkit-scrollbar { display: none; }
+.foot { flex: none; padding: 12px 16px 26px; border-top: 1px solid var(--line); background: var(--paper); display: grid; gap: 4px; }
+.foot .hint { text-align: center; font-size: 13px; color: var(--ink-2); margin: 2px 0 0; }
+
+/* ---------- Type ---------- */
+h1, h2, h3, p { margin: 0; }
+.h1 { font-size: 28px; line-height: 1.12; font-weight: 750; letter-spacing: -.025em; }
+.h2 { font-size: 21px; line-height: 1.2; font-weight: 720; letter-spacing: -.015em; }
+.h3 { font-size: 15px; font-weight: 700; }
+.lede { font-size: 16px; color: var(--ink-2); margin-top: 8px; }
+.small { font-size: 13.5px; color: var(--ink-2); }
+.eyebrow { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.big { font-size: 40px; line-height: 1.05; font-weight: 750; letter-spacing: -.03em; }
+.big .unit { font-size: 22px; font-weight: 650; letter-spacing: -.01em; margin-right: 2px; vertical-align: 3px; }
+.sec { margin-top: 26px; }
+.sec-title { font-size: 13px; font-weight: 700; color: var(--ink-2); margin-bottom: 10px; display: flex; justify-content: space-between; }
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 52px;
+  padding: 0 18px; border-radius: 14px; border: 0; font-weight: 650; font-size: 16px; cursor: pointer;
+  transition: transform .12s var(--ease), background .15s;
+}
+.btn:active { transform: scale(.98); }
+.btn-primary { background: var(--ink); color: #fff; }
+.btn-primary:hover { background: #2B2C31; }
+.btn-secondary { background: var(--paper); color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--line-2); }
+.btn-secondary:hover { box-shadow: inset 0 0 0 1.5px var(--ink-3); }
+.btn-quiet { background: none; min-height: 44px; font-weight: 600; font-size: 15px; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line-2); }
+.btn-quiet:hover { text-decoration-color: var(--ink); }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn[disabled] { opacity: .5; cursor: default; }
+.row-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.link { color: var(--ink); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line-2); background: none; border: 0; padding: 0; cursor: pointer; font-size: inherit; }
+.link:hover { text-decoration-color: var(--ink); }
+.link svg.i { width: 14px; height: 14px; vertical-align: -2px; margin-left: 2px; }
+.link { white-space: nowrap; }
+
+/* ---------- Money bar + ledger rows ---------- */
+.bar { display: flex; gap: 2px; height: 14px; border-radius: 7px; overflow: hidden; background: var(--line); }
+.bar span { height: 100%; min-width: 5px; transition: flex-grow .6s var(--ease); }
+.k-rent, .k-locked { background: var(--syrup); }
+.k-paid { background: var(--ink); }
+.k-fee { background: #8D8A82; }
+.k-fx { background: var(--hatch); }
+.k-back { background: var(--back); }
+.k-out { background: var(--hatch); }
+.ledger { margin-top: 6px; }
+.ledger .r { display: grid; grid-template-columns: 12px 1fr auto; gap: 10px; align-items: baseline; padding: 11px 0; border-top: 1px solid var(--line); }
+.ledger .r:first-child { border-top: 0; }
+.ledger .key { width: 10px; height: 10px; border-radius: 3px; transform: translateY(1px); }
+.ledger .lbl { font-weight: 600; font-size: 15px; }
+.ledger .sub { display: block; font-weight: 400; font-size: 13.5px; color: var(--ink-2); margin-top: 1px; }
+.ledger .amt { font-weight: 650; font-size: 15px; text-align: right; white-space: nowrap; }
+.ledger .amt .sub { text-align: right; }
+.ledger .r.total { border-top: 1.5px solid var(--ink); }
+.ledger .r.total .lbl, .ledger .r.total .amt { font-weight: 750; }
+
+/* ---------- Month tiles ---------- */
+.months { display: grid; grid-template-columns: repeat(12, 1fr); gap: 4px; }
+.m {
+  height: 38px; border-radius: 7px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+  padding-bottom: 4px; font-size: 11px; font-weight: 650; background: var(--syrup-soft); color: var(--syrup-ink);
+  box-shadow: inset 0 0 0 1px var(--syrup-line); position: relative;
+}
+.m svg.i { width: 12px; height: 12px; stroke-width: 2.6; margin-bottom: 2px; }
+.m.paid { background: var(--ink); color: #fff; box-shadow: none; }
+.m.back { background: var(--back-soft); color: var(--back); box-shadow: inset 0 0 0 1px #BFDCCB; }
+.m.next { box-shadow: inset 0 0 0 2px var(--syrup-ink); }
+.m.empty { background: var(--tint); color: var(--ink-3); box-shadow: inset 0 0 0 1px var(--line); }
+.m.just { animation: drop .5s var(--ease); }
+@keyframes drop { from { transform: translateY(-6px) scale(.9); opacity: .4; } }
+.months-legend { display: flex; gap: 14px; margin-top: 8px; font-size: 12.5px; color: var(--ink-2); }
+.months-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; }
+
+/* ---------- Cards, notes, status ---------- */
+.card { border-radius: 16px; background: var(--tint); padding: 16px; }
+.card + .card { margin-top: 10px; }
+.status { border-radius: 18px; padding: 18px; background: var(--tint); }
+.status.syrup { background: var(--syrup-soft); }
+.status.back { background: var(--back-soft); }
+.status.danger { background: var(--danger-soft); }
+.status .h2 { margin-top: 2px; }
+.status .small { margin-top: 6px; color: var(--ink-2); }
+.badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 700; padding: 4px 9px; border-radius: 999px; background: var(--paper); }
+.badge svg.i { width: 14px; height: 14px; }
+.badge.ok { color: var(--back); }
+.badge.wait { color: var(--syrup-ink); }
+.badge.stop { color: var(--danger); }
+.list-btn {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 0 2px; border: 0; border-top: 1px solid var(--line);
+  background: none; cursor: pointer; text-align: left; font-weight: 600; font-size: 15px;
+}
+.list-btn:first-child { border-top: 0; }
+.list-btn span { flex: 1; }
+.list-btn .small { font-weight: 400; display: block; }
+.list-btn:hover span:first-of-type { text-decoration: underline; text-underline-offset: 3px; }
+
+.never { display: grid; gap: 6px; margin-top: 10px; }
+.never div { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--ink); }
+.never svg.i { width: 16px; height: 16px; color: var(--back); stroke-width: 2.6; }
+
+.seg-ctl { display: flex; gap: 6px; flex-wrap: wrap; }
+.seg-ctl button {
+  min-height: 36px; padding: 0 12px; border-radius: 999px; border: 0; box-shadow: inset 0 0 0 1.5px var(--line-2);
+  background: var(--paper); font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.seg-ctl button[aria-pressed="true"] { background: var(--ink); color: #fff; box-shadow: none; }
+.whatif-out { margin-top: 10px; font-size: 15px; line-height: 1.4; }
+.whatif-out b { font-weight: 700; }
+
+.field { display: grid; gap: 6px; margin-top: 16px; }
+.field label, .field .label { font-size: 14px; font-weight: 650; }
+.input {
+  display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 0 14px; border-radius: 12px;
+  box-shadow: inset 0 0 0 1.5px var(--line-2); background: var(--paper); font-size: 16px;
+}
+.input input { border: 0; outline: 0; font: inherit; flex: 1 1 0; width: 100%; min-width: 0; background: none; color: var(--ink); }
+.input:focus-within { box-shadow: inset 0 0 0 2px var(--ink); }
+.input .pre, .input .post { color: var(--ink-2); font-weight: 600; }
+.stepper { display: grid; grid-template-columns: 52px 1fr 52px; align-items: center; border-radius: 12px; box-shadow: inset 0 0 0 1.5px var(--line-2); min-height: 52px; }
+.stepper button { height: 52px; border: 0; background: none; font-size: 22px; cursor: pointer; border-radius: 12px; }
+.stepper button:hover { background: var(--tint); }
+.stepper output { text-align: center; font-weight: 650; }
+.help { font-size: 13.5px; color: var(--ink-2); }
+.mediator { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+
+/* Landing comparison: how much a stranger holds before you arrive */
+.risk { margin-top: 28px; display: grid; gap: 16px; }
+.risk .lbl { display: flex; justify-content: space-between; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+.risk .lbl span:last-child { font-weight: 700; }
+.risk .track { height: 12px; border-radius: 6px; background: var(--line); overflow: hidden; }
+.risk .fill { height: 100%; background: var(--danger); border-radius: 6px; }
+.risk-caption { font-size: 13.5px; color: var(--ink-2); margin-top: 2px; }
+
+/* Paying progress */
+.steps { display: grid; gap: 0; margin-top: 22px; }
+.step { display: grid; grid-template-columns: 32px 1fr; gap: 12px; padding-bottom: 22px; position: relative; }
+.step:not(:last-child)::after { content: ''; position: absolute; left: 15px; top: 34px; bottom: 4px; width: 2px; background: var(--line); }
+.step.done:not(:last-child)::after { background: var(--ink); }
+.dot { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; box-shadow: inset 0 0 0 2px var(--line-2); background: var(--paper); }
+.step.done .dot { background: var(--ink); color: #fff; box-shadow: none; }
+.step.doing .dot { box-shadow: inset 0 0 0 2px var(--ink); }
+.step.doing .dot::after { content: ''; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--ink); border-right-color: transparent; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.step .t { font-weight: 650; padding-top: 4px; }
+.step .s { font-size: 13.5px; color: var(--ink-2); }
+.step:not(.done):not(.doing) .t { color: var(--ink-3); }
+
+.success-mark { width: 64px; height: 64px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; margin: 18px 0 18px; animation: pop .45s var(--ease); }
+.success-mark svg.i { width: 30px; height: 30px; stroke-width: 2.6; }
+.success-mark.green { background: var(--back); }
+@keyframes pop { from { transform: scale(.6); opacity: 0; } }
+.linkbox { display: flex; align-items: center; gap: 8px; margin-top: 18px; padding: 6px 6px 6px 14px; border-radius: 12px; box-shadow: inset 0 0 0 1.5px var(--line-2); font-weight: 600; }
+.linkbox span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.linkbox .chip-btn { min-height: 38px; }
+
+/* Activity */
+.act .r { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.act .r:first-child { border-top: 0; }
+.act .when { color: var(--ink-2); font-size: 12.5px; }
+.act .amt { font-weight: 650; text-align: right; }
+.act .rcpt { font-size: 12.5px; color: var(--ink-2); display: inline-flex; align-items: center; gap: 3px; }
+.act .rcpt svg.i { width: 12px; height: 12px; }
+
+/* Messages app (the landlord's phone before Stroop) */
+.msgs { background: #F4F4F6; }
+.msgs .ahead { background: #F4F4F6; border-bottom: 1px solid #E3E3E8; }
+.thread { display: flex; flex-direction: column; gap: 6px; padding: 14px 14px 24px; }
+.bub { max-width: 78%; padding: 9px 13px; border-radius: 18px; font-size: 15px; line-height: 1.35; }
+.bub.in { background: var(--paper); align-self: flex-start; border-bottom-left-radius: 6px; }
+.bub.out { background: #3A6FD8; color: #fff; align-self: flex-end; border-bottom-right-radius: 6px; }
+.day { text-align: center; font-size: 12px; color: var(--ink-2); margin: 8px 0 4px; }
+.preview {
+  align-self: flex-start; width: 80%; border-radius: 18px; border-bottom-left-radius: 6px; overflow: hidden; background: var(--paper);
+  border: 0; padding: 0; text-align: left; cursor: pointer; box-shadow: 0 0 0 2px transparent; transition: box-shadow .2s;
+}
+.preview:hover { box-shadow: 0 0 0 2px var(--syrup); }
+.preview .pv-top { background: var(--syrup-soft); padding: 14px; display: grid; gap: 4px; }
+.preview .pv-top .brand { font-size: 14px; }
+.preview .pv-top .brand svg { width: 14px; height: 14px; }
+.preview .pv-amt { font-size: 22px; font-weight: 750; letter-spacing: -.02em; }
+.preview .pv-bot { padding: 9px 14px 11px; font-size: 13px; color: var(--ink-2); }
+.preview.new { animation: pop .4s var(--ease); }
+
+/* Proof page */
+.proof-head { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
+.facts { margin-top: 18px; }
+.facts .r { display: flex; justify-content: space-between; gap: 12px; padding: 11px 0; border-top: 1px solid var(--line); font-size: 15px; }
+.facts .r span:first-child { color: var(--ink-2); }
+.facts .r span:last-child { font-weight: 600; text-align: right; }
+.rules { display: grid; gap: 10px; margin-top: 4px; }
+.rule { display: grid; grid-template-columns: 22px 1fr; gap: 10px; font-size: 14.5px; }
+.rule svg.i { width: 20px; height: 20px; color: var(--ink); margin-top: 1px; }
+
+/* Bottom sheet inside a phone */
+.sheet-wrap { position: absolute; inset: 0; z-index: 20; background: rgba(16, 17, 20, .4); display: flex; align-items: flex-end; animation: fade .2s; }
+@keyframes fade { from { opacity: 0; } }
+.sheet { width: 100%; max-height: 90%; overflow-y: auto; background: var(--paper); border-radius: 26px 26px 0 0; padding: 8px 20px 26px; animation: up .28s var(--ease); }
+@keyframes up { from { transform: translateY(40px); opacity: .5; } }
+.grab { width: 40px; height: 5px; border-radius: 3px; background: var(--line-2); margin: 0 auto 14px; }
+.sheet .h2 { margin-bottom: 6px; }
+.sheet .actions { display: grid; gap: 6px; margin-top: 20px; }
+.lock-big { width: 60px; height: 60px; border-radius: 18px; background: var(--danger-soft); color: var(--danger); display: grid; place-items: center; margin: 6px 0 16px; }
+.lock-big svg.i { width: 30px; height: 30px; }
+.lock-big.shake { animation: shake .5s .1s; }
+@keyframes shake { 20%, 60% { transform: translateX(-6px) rotate(-6deg); } 40%, 80% { transform: translateX(6px) rotate(6deg); } }
+.what-happens { margin-top: 16px; border-radius: 14px; background: var(--tint); padding: 4px 14px; }
+
+/* Toast */
+.toast {
+  position: absolute; z-index: 30; top: 48px; left: 12px; right: 12px; display: flex; gap: 12px; align-items: flex-start;
+  padding: 12px 14px; border-radius: 18px; background: var(--ink); color: #fff; box-shadow: 0 12px 30px -10px rgba(0, 0, 0, .5);
+  animation: toast .35s var(--ease);
+}
+.toast .ti { width: 32px; height: 32px; border-radius: 10px; background: rgba(255, 255, 255, .12); display: grid; place-items: center; flex: none; }
+.toast .ti svg.i { width: 18px; height: 18px; }
+.toast b { display: block; font-size: 15px; }
+.toast span { font-size: 13.5px; color: #D3D4D8; }
+@keyframes toast { from { transform: translateY(-16px); opacity: 0; } }
+
+/* ---------- The money panel (center) ---------- */
+.vault { padding-top: 36px; }
+.vault h2 { font-size: 13px; font-weight: 700; color: var(--ink-2); text-align: center; }
+.v-total { text-align: center; margin-top: 6px; }
+.v-total .big { font-size: 38px; }
+.v-total .small { margin-top: 2px; }
+.cols { display: grid; grid-template-columns: 1fr 1.25fr 1fr; gap: 10px; margin-top: 22px; align-items: start; }
+.col { display: flex; flex-direction: column; align-items: stretch; }
+.stack { display: flex; flex-direction: column-reverse; gap: 3px; min-height: calc(12 * 17px + 11 * 3px + 18px); justify-content: flex-start; }
+.blk { height: 17px; border-radius: 4px; }
+.blk.locked { background: var(--syrup); }
+.blk.fee { height: 8px; background: #8D8A82; }
+.blk.fee.held { background: var(--syrup); opacity: .55; }
+.blk.paid { background: var(--ink); }
+.blk.back { background: var(--back); }
+.blk.ghost { background: #E4E2DB; }
+.blk.in-r { animation: inR .55s var(--ease); }
+.blk.in-l { animation: inL .55s var(--ease); }
+@keyframes inR { from { transform: translateX(-40px); opacity: 0; } }
+@keyframes inL { from { transform: translateX(40px); opacity: 0; } }
+.col-foot { text-align: center; margin-top: 10px; border-top: 1.5px solid var(--ink); padding-top: 8px; }
+.col-foot b { display: block; font-size: 15px; }
+.col-foot span { font-size: 12.5px; color: var(--ink-2); line-height: 1.25; display: block; }
+.col.center .col-foot { border-color: var(--syrup-ink); }
+.v-rule { margin-top: 18px; text-align: center; font-size: 13.5px; color: var(--ink-2); padding: 0 6px; }
+.fees { margin-top: 22px; border-top: 1px solid var(--line-2); padding-top: 12px; }
+.fees .sec-title { margin-bottom: 4px; }
+.fees .r { display: flex; justify-content: space-between; gap: 10px; font-size: 13.5px; padding: 5px 0; }
+.fees .r span:first-child { color: var(--ink-2); }
+.fees .r span:last-child { font-weight: 600; }
+.demo { margin-top: 22px; display: grid; gap: 8px; }
+.demo .small { text-align: center; }
+.demo .btn { min-height: 46px; font-size: 15px; }
+.demo .btn.glow { box-shadow: 0 0 0 4px rgba(232, 145, 42, .35); }
+
+.flyer {
+  position: fixed; z-index: 100; pointer-events: none; padding: 6px 12px; border-radius: 999px; font-weight: 700; font-size: 14px;
+  background: var(--syrup); color: var(--ink); box-shadow: 0 8px 20px -6px rgba(0, 0, 0, .35); white-space: nowrap;
+}
+.flyer.paid { background: var(--ink); color: #fff; }
+.flyer.back { background: var(--back); color: #fff; }
+
+/* ---------- Mobile: one panel at a time, bottom tabs ---------- */
+.tabs { display: none; }
+@media (max-width: 1260px) { :root { --pw: 340px; } .stage { gap: 24px; grid-template-columns: var(--pw) minmax(230px, 270px) var(--pw); } }
+@media (max-width: 1000px) {
+  body { padding-bottom: 64px; }
+  .top { padding: 12px 16px 6px; }
+  .top-note { display: none; }
+  .stage { display: block; padding: 0; }
+  .stage > section, .stage > aside { display: none; }
+  .stage > [data-panel].on { display: block; }
+  .side-label { display: none; }
+  .phone { width: 100%; height: calc(100dvh - 58px - 64px); padding: 0; border-radius: 0; background: none; box-shadow: none; }
+  .screen { border-radius: 0; }
+  .sbar { display: none; }
+  .vault { padding: 12px 16px 24px; max-width: 420px; margin: 0 auto; }
+  .toast { top: 10px; }
+  .tabs {
+    display: grid; grid-template-columns: repeat(3, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; height: 64px;
+    background: var(--paper); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom);
+  }
+  .tabs button { border: 0; background: none; font-weight: 650; font-size: 14px; color: var(--ink-2); cursor: pointer; position: relative; }
+  .tabs button[aria-selected="true"] { color: var(--ink); box-shadow: inset 0 3px 0 var(--ink); }
+  .tabs button .dot-n { position: absolute; top: 12px; margin-left: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--syrup); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand" aria-label="Stroop"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5c3.6 4.3 6.6 8 6.6 11.6a6.6 6.6 0 0 1-13.2 0C5.4 10.5 8.4 6.8 12 2.5z" fill="#E8912A"/></svg>Stroop</div>
+  <p class="top-note"><b>Clickable prototype.</b> Example lease, example numbers. Fees and rates are estimates.</p>
+  <span class="spacer"></span>
+  <button class="chip-btn" data-act="restart"><svg class="i" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>Start over</button>
+</header>
+
+<main class="stage" id="stage">
+  <section data-panel="fam" aria-label="The family's phone">
+    <div class="side-label"><span><strong>The family</strong> · paying from Mumbai</span><span id="fam-next"></span></div>
+    <div class="phone"><div class="screen" id="fam"></div></div>
+  </section>
+  <aside data-panel="vault" class="vault" id="vault" aria-label="Where the money is"></aside>
+  <section data-panel="ll" aria-label="The landlord's phone">
+    <div class="side-label"><span><strong>The landlord</strong> · Waterloo, Ontario</span><span id="ll-next"></span></div>
+    <div class="phone"><div class="screen" id="ll"></div></div>
+  </section>
+</main>
+<nav class="tabs" role="tablist" aria-label="Views" id="tabs"></nav>
+
+<script>
+// ============ Example lease (matches the testnet demo: US$1,000 × 12, 1% fee) ============
+const RENT = 1000, MONTHS = 12, FEE = 0.01, FX_IN = 0.01, FX_OUT = 0.005, CAD = 1.40, NETWORK_USD = 0.07
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const MONTH_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+const P = { student: 'Priya', studentFull: 'Priya Sharma', landlord: 'Sam', landlordFull: 'Sam Tremblay', address: '41 Columbia St W, Unit 4', link: 'stroop.app/p/7F3K-92QD', bank: 'Bank ••4821' }
+const CUR = {
+  INR: { rate: 88.5, locale: 'en-IN', from: 'India', name: 'Indian rupees' },
+  CNY: { rate: 7.15, locale: 'en-US', from: 'China', name: 'Chinese yuan' },
+  NGN: { rate: 1480, locale: 'en-US', from: 'Nigeria', name: 'Nigerian naira' },
+  PHP: { rate: 58.5, locale: 'en-US', from: 'Philippines', name: 'Philippine pesos' },
+  VND: { rate: 26300, locale: 'en-US', from: 'Vietnam', name: 'Vietnamese dong' },
+  USD: { rate: 1, locale: 'en-US', from: 'the US', name: 'US dollars' },
+}
+
+// ============ Money formatting ============
+const usd = (n, cents = false) => 'US$' + n.toLocaleString('en-US', { minimumFractionDigits: cents ? 2 : 0, maximumFractionDigits: cents ? 2 : 0 })
+const cad = (n, cents = false) => 'C$' + n.toLocaleString('en-CA', { minimumFractionDigits: cents ? 2 : 0, maximumFractionDigits: cents ? 2 : 0 })
+function local(n, code) {
+  if (code === 'USD') return usd(n)
+  return new Intl.NumberFormat(CUR[code].locale, { style: 'currency', currency: code, currencyDisplay: 'narrowSymbol', maximumFractionDigits: 0 }).format(n)
+}
+/** Splits what leaves the family's bank into rent, Stroop's fee and the exchange partner's fee. */
+function quote(code, months = MONTHS) {
+  const c = CUR[code]
+  const rentUsd = RENT * months, feeUsd = rentUsd * FEE, lockUsd = rentUsd + feeUsd
+  const rent = rentUsd * c.rate, fee = feeUsd * c.rate, fx = code === 'USD' ? 0 : lockUsd * c.rate * FX_IN
+  const total = rent + fee + fx
+  return { rentUsd, feeUsd, lockUsd, rent, fee, fx, total, rentPct: (rent / total) * 100, feePct: (fee / total) * 100, fxPct: (fx / total) * 100 }
+}
+/** "₹88.50": the exchange rate, with as many decimals as it needs. */
+const rate = (code) => new Intl.NumberFormat(CUR[code].locale, { style: 'currency', currency: code, currencyDisplay: 'narrowSymbol', maximumFractionDigits: 2 }).format(CUR[code].rate)
+const cashOut = (u) => { const gross = u * CAD, fee = gross * FX_OUT; return { gross, fee, net: gross - fee } }
+
+// ============ State ============
+function fresh() {
+  return {
+    fam: { screen: 'welcome', cur: 'INR', months: MONTHS, sheet: null, toast: null, whatIf: 'fake', payStep: 0 },
+    ll: { screen: 'messages', sheet: null, toast: null, balance: 0, cashing: 0, outTotal: 0, signing: false },
+    lease: { status: 'draft', linkSent: false, paid: 0, feeTaken: false, back: 0, deadlinePassed: false, handedOver: false, endBy: null, disputeBy: null, sentHome: false },
+    log: [], tab: 'fam', fresh: null,
+  }
+}
+let S = fresh()
+const L = () => S.lease
+const months = () => S.fam.months
+const nextMon = () => MON[L().paid]
+
+/** Where every dollar of the lease is right now. */
+function where() {
+  const l = L(), rentTotal = RENT * months(), fee = rentTotal * FEE
+  if (l.status === 'draft') return { put: 0, locked: 0, paid: 0, fee: 0, feeHeld: 0, back: 0 }
+  const paid = l.paid * RENT, feeTaken = l.feeTaken ? fee : 0, back = l.back
+  const feeHeld = !l.feeTaken && l.back === 0 ? fee : 0
+  const locked = rentTotal + fee - paid - feeTaken - back - feeHeld
+  return { put: rentTotal + fee, locked, paid, fee: feeTaken, feeHeld, back }
+}
+
+/** Demo dates: locked Nov 14, accepted Nov 15, move-in Jan 3, rent on the 1st, other events mid-month. */
+function log(who, text, amt = '', kind = 'pay') {
+  const l = L()
+  let when
+  if (l.paid > 0) when = `${MON[l.paid - 1]} ${kind === 'pay' ? (l.paid === 1 ? 3 : 1) : 15}, 2027`
+  else if (l.deadlinePassed) when = 'Jan 11, 2027'
+  else when = l.status === 'accepted' ? 'Nov 15, 2026' : 'Nov 14, 2026'
+  S.log.unshift({ who, text, amt, when })
+}
+
+/** Which side has the next move, for the "Next step" hint. */
+function nextActor() {
+  const l = L()
+  if (l.status === 'draft') return 'fam'
+  if (l.status === 'funded') return l.linkSent ? 'll' : 'fam'
+  if (l.status === 'accepted') return l.handedOver || l.deadlinePassed ? 'fam' : 'fam'
+  if (l.status === 'active') {
+    if (l.endBy === 'fam') return 'll'
+    if (l.endBy === 'll') return 'fam'
+    if (S.ll.balance > 0) return 'll'
+    return 'clock'
+  }
+  if ((l.status === 'refunded' || l.status === 'ended') && !l.sentHome) return 'fam'
+  return null
+}
+
+// ============ Icons (Lucide paths) ============
+const ICON = {
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  key: '<path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4"/><path d="m21 2-9.6 9.6"/><circle cx="7.5" cy="15.5" r="5.5"/>',
+  back: '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
+  right: '<path d="m9 18 6-6-6-6"/>',
+  down: '<path d="m6 9 6 6 6-6"/>',
+  copy: '<rect x="8" y="8" width="14" height="14" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+  x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  shield: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
+  undo: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
+  ext: '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+  send: '<path d="M14.5 21.7a.5.5 0 0 0 .9 0L22 2.6a.5.5 0 0 0-.6-.6L2.3 8.6a.5.5 0 0 0 0 .9l8 3.2a2 2 0 0 1 1.1 1.1z"/><path d="m21.9 2.1-10.9 10.9"/>',
+  bank: '<path d="M3 22h18"/><path d="M6 18v-7"/><path d="M10 18v-7"/><path d="M14 18v-7"/><path d="M18 18v-7"/><path d="m12 2 8 5H4z"/>',
+  pause: '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>',
+  skip: '<path d="m5 4 10 8-10 8z"/><path d="M19 5v14"/>',
+  face: '<path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01"/><path d="M15 9h.01"/>',
+  coins: '<circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/>',
+  alert: '<circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>',
+  calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/>',
+  door: '<path d="M13 4h3a2 2 0 0 1 2 2v14"/><path d="M2 20h3"/><path d="M13 20h9"/><path d="M10 12v.01"/><path d="M13 4.56v16.88a.5.5 0 0 1-.6.49l-6.8-1.36A2 2 0 0 1 4 18.6V5.4a2 2 0 0 1 1.6-2l6.8-1.36a.5.5 0 0 1 .6.5z"/>',
+}
+const icon = (n, label) => `<svg class="i" viewBox="0 0 24 24" ${label ? `role="img" aria-label="${label}"` : 'aria-hidden="true"'}>${ICON[n]}</svg>`
+const DROP = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5c3.6 4.3 6.6 8 6.6 11.6a6.6 6.6 0 0 1-13.2 0C5.4 10.5 8.4 6.8 12 2.5z" fill="#E8912A"/></svg>'
+
+// ============ Shared pieces ============
+const btn = (label, act, kind = 'primary', ic = '', arg = '') => `<button class="btn btn-${kind}" data-act="${act}" ${arg !== '' ? `data-arg="${arg}"` : ''}>${ic ? icon(ic) : ''}${label}</button>`
+const statusBar = (time, city) => `<div class="sbar" aria-hidden="true"><span>${time}</span><span>${city}</span></div>`
+const header = ({ back, title, right = '' }) =>
+  `<div class="ahead">${back ? `<button class="icon-btn" data-act="${back}" aria-label="Back">${icon('back')}</button>` : ''}${title ? `<div class="title">${title}</div>` : `<div class="brand">${DROP}Stroop</div>`}${right}</div>`
+
+function monthTiles(view) {
+  const l = L(), n = months(), w = where()
+  const backMonths = Math.round(Math.max(0, w.back - (l.feeTaken ? 0 : RENT * n * FEE)) / RENT)
+  let html = '<div class="months num" role="img" aria-label="' + `${l.paid} of ${n} months paid` + '">'
+  for (let i = 0; i < n; i++) {
+    let cls = '', inner = MON[i][0]
+    if (l.status === 'draft') cls = 'empty'
+    else if (i < l.paid) { cls = 'paid'; inner = icon('check') + MON[i][0] }
+    else if (i >= n - backMonths) cls = 'back'
+    else if (i === l.paid && l.status === 'active') cls = 'next'
+    if (S.fresh === 'month' && i === l.paid - 1) cls += ' just'
+    html += `<div class="m ${cls}">${inner}</div>`
+  }
+  html += '</div>'
+  const legend = [`<span><i style="background:var(--ink)"></i>Paid${view === 'll' ? ' to you' : ''}</span>`, `<span><i style="background:var(--syrup)"></i>Locked</span>`]
+  if (backMonths) legend.push(`<span><i style="background:var(--back)"></i>Back to ${view === 'fam' ? 'you' : 'family'}</span>`)
+  return html + `<div class="months-legend">${legend.join('')}</div>`
+}
+
+/** The bar + rows answering "where is my money": used on both phones. */
+function moneyNow(view) {
+  const w = where(), fam = view === 'fam'
+  const rows = []
+  if (w.paid) rows.push(['k-paid', fam ? `Paid to ${P.landlord}` : 'Paid to you', usd(w.paid), w.paid])
+  if (w.fee && fam) rows.push(['k-fee', "Stroop's fee", usd(w.fee), w.fee])
+  const over = ['refunded', 'ended', 'completed'].includes(L().status)
+  if (!over) rows.push(['k-locked', fam ? 'Locked until each month is due' : 'Locked for you, paid monthly', usd(w.locked + (fam ? w.feeHeld : 0)), w.locked + (fam ? w.feeHeld : 0), fam && w.feeHeld ? `Includes ${usd(w.feeHeld)} fee, taken only at move-in` : ''])
+  if (w.back) rows.push(['k-back', fam ? 'Back to you' : 'Back to the family', usd(w.back), w.back])
+  const total = rows.reduce((s, r) => s + r[3], 0) || 1
+  return `<div class="bar" aria-hidden="true">${rows.filter((r) => r[3] > 0).map((r) => `<span class="${r[0]}" style="flex-grow:${r[3] / total}"></span>`).join('')}</div>
+  <div class="ledger num">${rows.map((r) => `<div class="r"><span class="key ${r[0]}"></span><span class="lbl">${r[1]}${r[4] ? `<span class="sub">${r[4]}</span>` : ''}</span><span class="amt">${r[2]}</span></div>`).join('')}</div>`
+}
+
+function activity(view) {
+  const items = S.log.filter((e) => view === 'fam' || e.who !== 'fam-only').slice(0, 5)
+  if (!items.length) return ''
+  return `<div class="sec"><div class="sec-title"><span>Activity</span><span>Every step is public on Stellar</span></div><div class="act num">${items
+    .map((e) => `<div class="r"><div>${e.text}<div class="when">${e.when} · <span class="rcpt">Receipt ${icon('ext')}</span></div></div><div class="amt">${e.amt}</div></div>`)
+    .join('')}</div></div>`
+}
+
+function toast(side) {
+  const t = S[side].toast
+  return t ? `<div class="toast" role="status"><div class="ti">${icon(t.icon || 'check')}</div><div><b>${t.title}</b>${t.body ? `<span>${t.body}</span>` : ''}</div></div>` : ''
+}
+
+function sheet(side, inner) {
+  return `<div class="sheet-wrap" data-act="close-sheet" data-arg="${side}"><div class="sheet" role="dialog" aria-modal="true" aria-label="${inner.label}" data-stop><div class="grab"></div>${inner.html}</div></div>`
+}
+
+// ============ Family phone ============
+const FAM = {
+  welcome() {
+    const q = quote(S.fam.cur)
+    return {
+      body: `<div class="scroll">
+        <h1 class="h1" style="margin-top:18px">Don’t wire a year of rent to a stranger.</h1>
+        <p class="lede">Lock it with Stroop instead. Your landlord can see it’s there and gets paid one month at a time.</p>
+        <div class="risk num" aria-label="How much a stranger holds before you arrive">
+          <div><div class="lbl"><span>Wire it upfront</span><span>${local(q.total, S.fam.cur)}</span></div><div class="track"><div class="fill" style="width:100%"></div></div></div>
+          <div><div class="lbl"><span>Lock it with Stroop</span><span>${local(0, S.fam.cur)}</span></div><div class="track"><div class="fill" style="width:0"></div></div></div>
+          <p class="risk-caption">What a landlord you’ve never met holds before you get the keys.</p>
+        </div>
+        <div class="sec card">
+          <div class="rules">
+            <div class="rule">${icon('lock')}<span><b>Locked, not handed over.</b> Paid out one month at a time, never early.</span></div>
+            <div class="rule">${icon('undo')}<span><b>Fake listing?</b> No keys, no rent. It all comes back.</span></div>
+            <div class="rule">${icon('coins')}<span><b>1% fee</b>, only once you’ve moved in.</span></div>
+          </div>
+        </div>
+      </div>`,
+      foot: `${btn('Lock your rent', 'fam-go', 'primary', '', 'setup')}<button class="btn btn-quiet" data-act="fam-go" data-arg="review">See every fee first</button>`,
+    }
+  },
+  setup() {
+    const n = months()
+    return {
+      head: header({ back: 'fam-back', title: 'Your lease' }),
+      body: `<div class="scroll">
+        <p class="small">Step 1 of 2</p>
+        <div class="field"><span class="label">Landlord</span><div class="input"><input value="${P.landlordFull}" aria-label="Landlord name"></div></div>
+        <div class="field"><span class="label">Home</span><div class="input"><input value="${P.address}, Waterloo" aria-label="Address"></div></div>
+        <div class="field"><label for="rent">Rent each month</label><div class="input num"><span class="pre">US$</span><input id="rent" value="1,000" inputmode="decimal"><span class="post">≈ ${cad(RENT * CAD)}</span></div><p class="help">Stroop holds rent in digital US dollars so it can cross borders.</p></div>
+        <div class="field"><span class="label">How many months</span><div class="stepper num"><button data-act="months" data-arg="-1" aria-label="Fewer months">−</button><output aria-live="polite">${n} months</output><button data-act="months" data-arg="1" aria-label="More months">+</button></div></div>
+        <div class="field"><span class="label">Move in by</span><div class="input">${icon('calendar')}<input value="January 10, 2027" aria-label="Move-in deadline"></div><p class="help">No keys by this date? Everything comes back to you.</p></div>
+        <div class="field"><span class="label">If you disagree</span><div class="mediator card" style="padding:12px 14px"><span><b style="font-weight:650">Stroop Resolution Desk</b><span class="help" style="display:block">Decides how to split what’s still locked. Nothing else.</span></span><button class="link" data-act="noop">Change</button></div></div>
+      </div>`,
+      foot: btn(`See the total`, 'fam-go', 'primary', '', 'review'),
+    }
+  },
+  review() {
+    const code = S.fam.cur, q = quote(code, months()), f = S.fam
+    const whatIf = {
+      fake: `No keys by Jan 10? <b>All ${usd(q.lockUsd)} comes back</b>, Stroop’s fee included.`,
+      leave: `Leave after 6 months, with ${P.landlord}’s OK? <b>${usd(RENT * (months() - 6))} of unpaid rent comes back.</b>`,
+      problem: `Payments pause. The mediator splits <b>only what’s still locked</b> between you and ${P.landlord}.`,
+    }
+    const pct = Math.floor(q.rentPct)
+    const sym = local(100, code).replace(/[\d,.\s]/g, '')
+    return {
+      head: header({ back: 'fam-back', title: 'Where your money goes' }),
+      body: `<div class="scroll">
+        <p class="small">Step 2 of 2</p>
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:14px;gap:8px">
+          <div><p class="eyebrow">Leaves your bank</p><p class="big num" style="margin-top:4px">${local(q.total, code)}</p></div>
+          <button class="chip-btn" data-act="fam-sheet" data-arg="currency" aria-label="Currency: ${code}. Change">${code} ${icon('down')}</button>
+        </div>
+        <p class="lede" style="margin-top:10px"><b style="color:var(--ink)">${sym}${pct} of every ${sym}100 becomes rent.</b> Here’s the rest.</p>
+        <div class="bar" style="margin-top:16px" aria-hidden="true"><span class="k-rent" style="flex-grow:${q.rentPct}"></span><span class="k-fee" style="flex-grow:${q.feePct}"></span>${q.fx ? `<span class="k-fx" style="flex-grow:${q.fxPct}"></span>` : ''}</div>
+        <div class="ledger num">
+          <div class="r"><span class="key k-rent"></span><span class="lbl">Rent for ${P.landlord}<span class="sub">${months()} × ${usd(RENT)}, locked, paid monthly</span></span><span class="amt">${local(q.rent, code)}<span class="sub">${usd(q.rentUsd)}</span></span></div>
+          <div class="r"><span class="key k-fee"></span><span class="lbl">Stroop’s fee, 1%<span class="sub">Taken when you move in. Refunded if you don’t.</span></span><span class="amt">${local(q.fee, code)}<span class="sub">${usd(q.feeUsd)}</span></span></div>
+          ${q.fx ? `<div class="r"><span class="key k-fx"></span><span class="lbl">Exchange fee, est. 1%<span class="sub">Kept by the exchange partner that turns ${CUR[code].name} into US$. Not Stroop.</span></span><span class="amt">${local(q.fx, code)}</span></div>` : ''}
+          <div class="r"><span class="key" style="box-shadow:inset 0 0 0 1.5px var(--line-2)"></span><span class="lbl">Stellar network fee<span class="sub">About ${usd(NETWORK_USD, true)}. Stroop pays it.</span></span><span class="amt">${local(0, code)}</span></div>
+        </div>
+        ${q.fx ? `<p class="help" style="margin-top:4px">Rate: ${rate(code)} per US$1, fixed when you pay.</p>` : ''}
+        <div class="sec card">
+          <p class="h3">Stroop never makes money from</p>
+          <div class="never">
+            <div>${icon('check')}Interest on your locked rent</div>
+            <div>${icon('check')}A markup on the exchange rate</div>
+            <div>${icon('check')}Your landlord. It’s free for them.</div>
+          </div>
+        </div>
+        <div class="sec">
+          <p class="h3" style="margin-bottom:10px">What if…</p>
+          <div class="seg-ctl" role="group" aria-label="What if">
+            ${[['fake', 'the listing is fake'], ['leave', 'we leave early'], ['problem', 'there’s a problem']].map(([k, t]) => `<button data-act="whatif" data-arg="${k}" aria-pressed="${f.whatIf === k}">${t}</button>`).join('')}
+          </div>
+          <p class="whatif-out" aria-live="polite">${whatIf[f.whatIf]}</p>
+        </div>
+      </div>`,
+      foot: btn(`Pay ${local(q.total, code)}`, 'fam-pay', 'primary', 'lock'),
+    }
+  },
+  paying() {
+    const code = S.fam.cur, q = quote(code, months()), s = S.fam.payStep
+    const steps = [
+      [`${local(q.total, code)} left your bank`, 'From your bank account'],
+      [`Exchanged to ${usd(q.lockUsd)}`, q.fx ? `Exchange fee ${local(q.fx, code)}` : 'No exchange needed'],
+      [`Locked for ${P.landlordFull}`, 'In the Stroop contract on Stellar'],
+    ]
+    return {
+      head: header({ title: 'Locking your rent' }),
+      body: `<div class="scroll"><div class="steps num" aria-live="polite">${steps
+        .map(([t, sub], i) => `<div class="step ${i < s ? 'done' : i === s ? 'doing' : ''}"><div class="dot">${i < s ? icon('check') : ''}</div><div><p class="t">${t}</p><p class="s">${sub}</p></div></div>`)
+        .join('')}</div></div>`,
+      foot: `<p class="hint">Usually under a minute.</p>`,
+    }
+  },
+  locked() {
+    const q = quote(S.fam.cur, months())
+    return {
+      body: `<div class="scroll" style="padding-top:20px">
+        <div class="success-mark">${icon('lock')}</div>
+        <h1 class="h1 num">${usd(q.lockUsd)} is locked.</h1>
+        <p class="lede">Nobody can move it early. Not ${P.landlord}, not you, not Stroop.</p>
+        <div class="sec card">
+          <p class="h3">Now send ${P.landlord} your proof link</p>
+          <p class="small" style="margin-top:4px">${P.landlord} sees the locked rent live, with no credit check. Until ${P.landlord} accepts, you can cancel for a full refund.</p>
+          <div class="linkbox"><span>${P.link}</span><button class="chip-btn" data-act="noop">${icon('copy')}Copy</button></div>
+        </div>
+      </div>`,
+      foot: btn(`Send link to ${P.landlord}`, 'fam-send', 'primary', 'send'),
+    }
+  },
+  home() {
+    const l = L(), q = quote(S.fam.cur, months()), w = where()
+    let status = '', actions = '', more = ''
+    if (l.status === 'funded') {
+      status = `<div class="status"><span class="badge wait">${icon('calendar')}Waiting for ${P.landlord}</span><p class="h2" style="margin-top:10px">${P.landlord} has your proof link.</p><p class="small">Once ${P.landlord} accepts, the lease is set. Until then you can cancel for a full refund.</p></div>`
+      more = `<button class="list-btn" data-act="fam-sheet" data-arg="cancel"><span>Cancel and get ${usd(q.lockUsd)} back</span>${icon('right')}</button>`
+    } else if (l.status === 'accepted' && l.deadlinePassed && !l.handedOver) {
+      status = `<div class="status danger"><span class="badge stop">${icon('alert')}No keys by Jan 10</span><p class="h2" style="margin-top:10px">Take your rent back.</p><p class="small">${P.landlord} never handed over the keys, so all ${usd(q.lockUsd)} is yours again, Stroop’s fee included.</p></div>`
+      actions = btn(`Take back ${usd(q.lockUsd)}`, 'fam-sheet', 'primary', 'undo', 'reclaim')
+    } else if (l.status === 'accepted' && l.handedOver) {
+      status = `<div class="status syrup"><span class="badge wait">${icon('key')}Keys handed over</span><p class="h2" style="margin-top:10px">${P.landlord} says you have the keys.</p><p class="small">Confirm to start the lease, or report a problem within 3 days.</p></div>`
+      actions = btn('Confirm move-in', 'fam-sheet', 'primary', 'key', 'movein')
+      more = `<button class="list-btn" data-act="fam-sheet" data-arg="dispute"><span>I didn’t get the keys</span>${icon('right')}</button>`
+    } else if (l.status === 'accepted') {
+      status = `<div class="status"><span class="badge ok">${icon('check')}${P.landlord} accepted</span><p class="h2" style="margin-top:10px">Got the keys?</p><p class="small">Confirm once you’re in. That pays January and Stroop’s fee. No keys by Jan 10? It all comes back.</p></div>`
+      actions = btn('I’ve got the keys', 'fam-sheet', 'primary', 'key', 'movein')
+    } else if (l.status === 'active' && l.endBy === 'll') {
+      status = `<div class="status syrup"><span class="badge wait">${icon('door')}Request from ${P.landlord}</span><p class="h2" style="margin-top:10px">End the lease after ${MONTH_FULL[l.paid - 1]}?</p><p class="small">${usd(w.locked)} of unpaid rent would come back to you.</p></div>`
+      actions = `<div class="row-btns">${btn('Decline', 'end-decline', 'secondary', '', 'fam')}${btn('Agree', 'end-agree', 'primary')}</div>`
+    } else if (l.status === 'active' && l.endBy === 'fam') {
+      status = `<div class="status"><span class="badge wait">${icon('door')}Waiting for ${P.landlord}</span><p class="h2" style="margin-top:10px">You asked to end after ${MONTH_FULL[l.paid - 1]}.</p><p class="small">If ${P.landlord} agrees, ${usd(w.locked)} comes back to you. The request lapses in 1 month.</p></div>`
+      more = `<button class="list-btn" data-act="end-withdraw"><span>Withdraw request</span>${icon('right')}</button>`
+    } else if (l.status === 'active') {
+      status = `<div class="status"><span class="badge ok">${icon('check')}Month ${l.paid} of ${months()} paid</span><p class="h2 num" style="margin-top:10px">Next: ${usd(RENT)} to ${P.landlord} on ${nextMon()} 1.</p><p class="small">Paid automatically. Nothing for you to do.</p></div>`
+      more = `<button class="list-btn" data-act="fam-sheet" data-arg="end"><span>End the lease early</span>${icon('right')}</button><button class="list-btn" data-act="fam-sheet" data-arg="dispute"><span>Report a problem</span>${icon('right')}</button>`
+    } else if (l.status === 'disputed') {
+      status = `<div class="status danger"><span class="badge stop">${icon('pause')}Payments paused</span><p class="h2" style="margin-top:10px">The mediator is looking at it.</p><p class="small">Stroop Resolution Desk can only split what’s still locked (${usd(w.locked)}) between you and ${P.landlord}.</p></div>`
+      if (l.disputeBy === 'fam') more = `<button class="list-btn" data-act="dispute-withdraw"><span>Withdraw report and resume</span>${icon('right')}</button>`
+    } else if (l.status === 'completed') {
+      status = `<div class="status back"><span class="badge ok">${icon('check')}Lease complete</span><p class="h2 num" style="margin-top:10px">All ${months()} months paid to ${P.landlord}.</p><p class="small">That’s ${months()} months of on-time rent on record.</p></div>`
+    } else if (l.status === 'refunded' || l.status === 'ended') {
+      const home = local(w.back * CUR[S.fam.cur].rate * (1 - FX_IN), S.fam.cur)
+      status = `<div class="status back"><span class="badge ok">${icon('undo')}${l.status === 'refunded' ? 'Refunded' : 'Lease ended'}</span><p class="h2 num" style="margin-top:10px">${usd(w.back)} is back with you.</p><p class="small">${l.sentHome ? `On its way to your bank: about ${home} after the exchange fee.` : `Send it to your bank: about ${home} after the est. 1% exchange fee.`}</p></div>`
+      if (!l.sentHome) actions = btn('Send to my bank', 'fam-sendhome', 'primary', 'bank')
+    }
+    const feeRows = `<div class="ledger num">
+      <div class="r"><span class="key k-fx"></span><span class="lbl">Exchange partner</span><span class="amt">${q.fx ? local(q.fx, S.fam.cur) : '–'}</span></div>
+      <div class="r"><span class="key k-fee"></span><span class="lbl">Stroop<span class="sub">${l.feeTaken ? 'Taken at move-in' : w.back ? 'Refunded to you' : 'Held until you move in'}</span></span><span class="amt">${l.feeTaken ? usd(q.feeUsd) : usd(0)}</span></div>
+      <div class="r"><span class="key" style="box-shadow:inset 0 0 0 1.5px var(--line-2)"></span><span class="lbl">Stellar network<span class="sub">Paid by Stroop</span></span><span class="amt">${usd(0)}</span></div>
+    </div>`
+    return {
+      head: header({ right: `<span class="who">Sharma family</span>` }),
+      body: `<div class="scroll">
+        <p class="small">${P.address} · ${P.landlordFull}</p>
+        <div style="margin-top:12px">${status}</div>
+        ${actions ? `<div style="margin-top:12px">${actions}</div>` : ''}
+        <div class="sec"><div class="sec-title"><span>Where your ${usd(w.put)} is</span></div>${moneyNow('fam')}</div>
+        <div class="sec"><div class="sec-title"><span>2027</span><span class="num">${l.paid} of ${months()} paid</span></div>${monthTiles('fam')}</div>
+        <div class="sec"><div class="sec-title"><span>Fees you’ve paid</span></div>${feeRows}</div>
+        ${more ? `<div class="sec">${more}</div>` : ''}
+        ${activity('fam')}
+      </div>`,
+    }
+  },
+}
+
+const FAM_SHEETS = {
+  currency: () => ({
+    label: 'Paying from',
+    html: `<p class="h2">Paying from</p><p class="small">We show the exchange fee for your currency.</p><div style="margin-top:12px">${Object.entries(CUR)
+      .map(([code, c]) => `<button class="list-btn" data-act="set-cur" data-arg="${code}"><span>${c.from}<span class="small">${c.name}</span></span>${S.fam.cur === code ? icon('check', 'Selected') : ''}</button>`)
+      .join('')}</div>`,
+  }),
+  movein: () => ({
+    label: 'Confirm move-in',
+    html: `<p class="h2">You’re in. Confirm move-in?</p><p class="small">This starts the lease. You can’t take the rent back after this, but you can still end early or report a problem.</p>
+      <div class="what-happens ledger num">
+        <div class="r"><span class="key k-paid"></span><span class="lbl">January rent to ${P.landlord}<span class="sub">Paid right now</span></span><span class="amt">${usd(RENT)}</span></div>
+        <div class="r"><span class="key k-fee"></span><span class="lbl">Stroop’s fee, 1%<span class="sub">The only thing Stroop earns</span></span><span class="amt">${usd(RENT * months() * FEE)}</span></div>
+        <div class="r"><span class="key k-locked"></span><span class="lbl">Stays locked<span class="sub">One month goes out each rent day</span></span><span class="amt">${usd(RENT * (months() - 1))}</span></div>
+      </div>
+      <div class="actions">${btn('Confirm move-in', 'fam-movein', 'primary', 'key')}${btn('Not yet', 'close-sheet', 'quiet', '', 'fam')}</div>`,
+  }),
+  reclaim: () => ({
+    label: 'Take your rent back',
+    html: `<p class="h2 num">Take back ${usd(RENT * months() * (1 + FEE))}?</p><p class="small">The move-in deadline passed with no keys. The contract returns everything, Stroop’s fee included.</p>
+      <div class="actions">${btn('Take it all back', 'fam-reclaim', 'primary', 'undo')}${btn('Not now', 'close-sheet', 'quiet', '', 'fam')}</div>`,
+  }),
+  cancel: () => ({
+    label: 'Cancel lease',
+    html: `<p class="h2 num">Cancel and get ${usd(RENT * months() * (1 + FEE))} back?</p><p class="small">${P.landlord} hasn’t accepted yet, so you get everything back, fee included. The proof link stops working.</p>
+      <div class="actions">${btn('Cancel lease', 'fam-reclaim', 'danger')}${btn('Keep it', 'close-sheet', 'quiet', '', 'fam')}</div>`,
+  }),
+  end: () => endSheet('fam'),
+  dispute: () => disputeSheet('fam'),
+}
+
+function endSheet(side) {
+  const w = where(), other = side === 'fam' ? P.landlord : 'the family'
+  return {
+    label: 'End the lease early',
+    html: `<p class="h2">End after ${MONTH_FULL[L().paid - 1]}?</p><p class="small">${other === P.landlord ? P.landlord : 'The family'} has to agree. If no one answers within a month, the request lapses.</p>
+      <div class="what-happens ledger num">
+        <div class="r"><span class="key k-paid"></span><span class="lbl">Already paid to ${side === 'fam' ? P.landlord : 'you'}</span><span class="amt">${usd(w.paid)}</span></div>
+        <div class="r"><span class="key k-back"></span><span class="lbl">Comes back to ${side === 'fam' ? 'you' : 'the family'}</span><span class="amt">${usd(w.locked)}</span></div>
+        <div class="r"><span class="key k-fee"></span><span class="lbl">Stroop’s fee<span class="sub">Already taken at move-in</span></span><span class="amt">${usd(w.fee)}</span></div>
+      </div>
+      <div class="actions">${btn(`Ask ${other === P.landlord ? P.landlord : 'the family'}`, 'end-propose', 'primary', 'send', side)}${btn('Never mind', 'close-sheet', 'quiet', '', side)}</div>`,
+  }
+}
+function disputeSheet(side) {
+  const w = where()
+  return {
+    label: 'Report a problem',
+    html: `<p class="h2">Report a problem?</p><p class="small">Payments pause right away. The Stroop Resolution Desk hears both sides.</p>
+      <div class="what-happens rules" style="padding:14px">
+        <div class="rule">${icon('check')}<span>Can split the ${usd(w.locked)} still locked between you and ${side === 'fam' ? P.landlord : 'the family'}.</span></div>
+        <div class="rule">${icon('x')}<span>Can’t keep any of it, send it anywhere else, or touch rent already paid.</span></div>
+      </div>
+      <div class="actions">${btn('Pause payments and report', 'dispute', 'danger', 'pause', side)}${btn('Never mind', 'close-sheet', 'quiet', '', side)}</div>`,
+  }
+}
+
+// ============ Landlord phone ============
+const LL = {
+  messages() {
+    const l = L()
+    return {
+      cls: 'msgs',
+      head: `<div class="ahead"><div class="title" style="text-align:center">${P.studentFull}<span class="small" style="display:block;font-weight:400">Messages</span></div></div>`,
+      body: `<div class="scroll" style="padding:0"><div class="thread">
+        <p class="day">Tuesday</p>
+        <div class="bub in">Hi Sam! I’m Priya, starting at UW in January. Is Unit 4 still available?</div>
+        <div class="bub out">It is. Since you don’t have Canadian credit, I’d need 6 months upfront.</div>
+        <div class="bub in">My parents would rather not wire that much before we arrive. Can we show you the full year is ready instead?</div>
+        ${l.linkSent ? `<p class="day">Today</p><div class="bub in">Here’s the proof. It’s all locked for you:</div>
+        <button class="preview ${S.fresh === 'link' ? 'new' : ''}" data-act="ll-go" data-arg="proof" aria-label="Open Stroop proof link">
+          <div class="pv-top"><span class="brand">${DROP}Stroop · Proof of rent</span><span class="pv-amt num">${usd(RENT * months())} locked</span><span class="small">for ${P.address}</span></div>
+          <div class="pv-bot">${P.link}</div>
+        </button>` : ''}
+      </div></div>`,
+      foot: l.linkSent ? `<p class="hint">Tap the link to open it.</p>` : `<p class="hint">Waiting for Priya’s family…</p>`,
+    }
+  },
+  proof() {
+    const l = L(), n = months(), out = cashOut(RENT)
+    const accepted = l.status !== 'funded'
+    return {
+      head: header({ back: 'll-back', right: `<span class="badge ok" style="background:var(--back-soft)">${icon('shield')}Verified</span>` }),
+      body: `<div class="scroll">
+        <p class="eyebrow">Proof of rent · ${P.studentFull}</p>
+        <p class="big num" style="margin-top:6px">${usd(RENT * n)}</p>
+        <p class="lede" style="margin-top:4px">is locked for your lease at ${P.address}.</p>
+        <p class="small" style="margin-top:8px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--back);margin-right:6px"></span>Live from Stellar · <button class="link" data-act="noop">View record${icon('ext')}</button></p>
+        <div class="facts num">
+          <div class="r"><span>You get</span><span>${usd(RENT)} on the 1st, Jan–${MON[n - 1]} 2027</span></div>
+          <div class="r"><span>In your bank</span><span>≈ ${cad(out.net)} a month</span></div>
+          <div class="r"><span>Cost to you</span><span>Free</span></div>
+          <div class="r"><span>Disagreements</span><span>Stroop Resolution Desk</span></div>
+        </div>
+        <div class="sec">${monthTiles('ll')}</div>
+        <div class="sec card"><div class="rules">
+          <div class="rule">${icon('key')}<span>Once you hand over the keys, <b>the family can’t take the rent back.</b></span></div>
+          <div class="rule">${icon('lock')}<span>Each month unlocks on its date. <b>Nobody can release one early</b>, including Stroop.</span></div>
+        </div></div>
+      </div>`,
+      foot: accepted ? btn('Open your lease', 'll-go', 'secondary', '', 'home') : btn('Accept lease', 'll-sheet', 'primary', 'check', 'signup'),
+    }
+  },
+  home() {
+    const l = L(), w = where(), out = cashOut(S.ll.balance)
+    let status = '', actions = '', more = ''
+    if (l.status === 'accepted' && l.deadlinePassed && !l.handedOver) {
+      status = `<div class="status danger"><span class="badge stop">${icon('alert')}Move-in deadline passed</span><p class="h2" style="margin-top:10px">No keys by Jan 10.</p><p class="small">The family can take the rent back.</p></div>`
+    } else if (l.status === 'accepted' && l.handedOver) {
+      status = `<div class="status syrup"><span class="badge wait">${icon('key')}Keys handed over</span><p class="h2" style="margin-top:10px">Waiting for Priya to confirm.</p><p class="small">If Priya says nothing for 3 days, the lease starts and January is paid to you.</p></div>`
+    } else if (l.status === 'accepted') {
+      status = `<div class="status"><span class="badge ok">${icon('check')}Accepted</span><p class="h2" style="margin-top:10px">Hand over the keys on move-in day.</p><p class="small">January is paid when Priya confirms or you mark the keys handed over.</p></div>`
+      actions = btn('I’ve handed over the keys', 'll-sheet', 'primary', 'key', 'keys')
+    } else if (l.status === 'active' && l.endBy === 'fam') {
+      status = `<div class="status syrup"><span class="badge wait">${icon('door')}Request from the family</span><p class="h2" style="margin-top:10px">End the lease after ${MONTH_FULL[l.paid - 1]}?</p><p class="small">You keep the ${usd(w.paid)} paid so far. ${usd(w.locked)} goes back to the family.</p></div>`
+      actions = `<div class="row-btns">${btn('Decline', 'end-decline', 'secondary', '', 'll')}${btn('Agree', 'end-agree', 'primary')}</div>`
+    } else if (l.status === 'active' && l.endBy === 'll') {
+      status = `<div class="status"><span class="badge wait">${icon('door')}Waiting for the family</span><p class="h2" style="margin-top:10px">You asked to end after ${MONTH_FULL[l.paid - 1]}.</p></div>`
+      more = `<button class="list-btn" data-act="end-withdraw"><span>Withdraw request</span>${icon('right')}</button>`
+    } else if (l.status === 'active') {
+      status = `<div class="status"><span class="badge ok">${icon('check')}Paid on time</span><p class="h2 num" style="margin-top:10px">Next: ${usd(RENT)} on ${nextMon()} 1.</p><p class="small">Sent to you automatically.</p></div>`
+      more = `<button class="list-btn" data-act="ll-early"><span>Collect ${MONTH_FULL[l.paid]} now<span class="small">Try it: the contract won’t allow it.</span></span>${icon('lock')}</button><button class="list-btn" data-act="ll-sheet" data-arg="end"><span>End the lease early</span>${icon('right')}</button><button class="list-btn" data-act="ll-sheet" data-arg="dispute"><span>Report a problem</span>${icon('right')}</button>`
+    } else if (l.status === 'disputed') {
+      status = `<div class="status danger"><span class="badge stop">${icon('pause')}Payments paused</span><p class="h2" style="margin-top:10px">The mediator is looking at it.</p><p class="small">Rent already paid to you stays yours.</p></div>`
+      if (l.disputeBy === 'll') more = `<button class="list-btn" data-act="dispute-withdraw"><span>Withdraw report and resume</span>${icon('right')}</button>`
+    } else if (l.status === 'completed') {
+      status = `<div class="status back"><span class="badge ok">${icon('check')}Lease complete</span><p class="h2 num" style="margin-top:10px">All ${months()} months paid to you.</p></div>`
+    } else if (l.status === 'refunded') {
+      status = `<div class="status"><span class="badge">${icon('undo')}Refunded</span><p class="h2" style="margin-top:10px">The family took the rent back.</p><p class="small">No keys were handed over by Jan 10.</p></div>`
+    } else if (l.status === 'ended') {
+      status = `<div class="status"><span class="badge">${icon('door')}Ended early</span><p class="h2 num" style="margin-top:10px">You were paid for ${l.paid} ${l.paid === 1 ? 'month' : 'months'}.</p></div>`
+    }
+    const balance = S.ll.balance
+      ? `<div class="sec card" style="background:var(--paper);box-shadow:inset 0 0 0 1.5px var(--line)"><p class="eyebrow">Ready to cash out</p><p class="big num" style="font-size:32px;margin-top:4px">${usd(S.ll.balance)}</p><p class="small num">≈ ${cad(out.net)} in your bank</p><div style="margin-top:12px">${btn(`Cash out to your bank`, 'll-go', 'primary', 'bank', 'cashout')}</div></div>`
+      : S.ll.outTotal
+        ? `<div class="sec small num" style="display:flex;gap:8px;align-items:center">${icon('bank')}${cad(S.ll.outTotal)} sent to your bank so far.</div>`
+        : ''
+    return {
+      head: header({ right: `<span class="who">Sam Tremblay</span>` }),
+      body: `<div class="scroll">
+        <p class="small">${P.address} · ${P.studentFull}</p>
+        <div style="margin-top:12px">${status}</div>
+        ${actions ? `<div style="margin-top:12px">${actions}</div>` : ''}
+        ${balance}
+        <div class="sec"><div class="sec-title"><span>Your rent</span></div>${moneyNow('ll')}</div>
+        <div class="sec"><div class="sec-title"><span>2027</span><span class="num">${l.paid} of ${months()} paid</span></div>${monthTiles('ll')}</div>
+        ${more ? `<div class="sec">${more}</div>` : ''}
+        ${activity('ll')}
+      </div>`,
+    }
+  },
+  cashout() {
+    const u = S.ll.balance, o = cashOut(u)
+    return {
+      head: header({ back: 'll-home', title: 'Cash out' }),
+      body: `<div class="scroll">
+        <p class="eyebrow" style="margin-top:8px">Lands in your bank</p>
+        <p class="big num" style="margin-top:4px">${cad(o.net, true)}</p>
+        <p class="small" style="margin-top:6px;display:flex;gap:6px;align-items:center">${icon('bank')}${P.bank}</p>
+        <div class="sec ledger num">
+          <div class="r"><span class="key k-paid"></span><span class="lbl">Your rent</span><span class="amt">${usd(u, true)}</span></div>
+          <div class="r"><span class="key" style="box-shadow:inset 0 0 0 1.5px var(--line-2)"></span><span class="lbl">In Canadian dollars<span class="sub">At C$${CAD.toFixed(2)} per US$1</span></span><span class="amt">${cad(o.gross, true)}</span></div>
+          <div class="r"><span class="key k-out"></span><span class="lbl">Cash-out fee, est. 0.5%<span class="sub">Kept by the licensed cash-out partner</span></span><span class="amt">−${cad(o.fee, true)}</span></div>
+          <div class="r"><span class="key k-fee"></span><span class="lbl">Stroop’s fee<span class="sub">Free for landlords</span></span><span class="amt">${cad(0, true)}</span></div>
+          <div class="r total"><span></span><span class="lbl">You get</span><span class="amt">${cad(o.net, true)}</span></div>
+        </div>
+      </div>`,
+      foot: btn(`Cash out ${cad(o.net, true)}`, 'll-cashout', 'primary', 'bank'),
+    }
+  },
+  cashed() {
+    return {
+      body: `<div class="scroll" style="padding-top:20px"><div class="success-mark green">${icon('check')}</div><h1 class="h1 num">${cad(S.ll.cashing, true)} is on its way.</h1><p class="lede">To ${P.bank}, through the cash-out partner.</p></div>`,
+      foot: btn('Done', 'll-go', 'primary', '', 'home'),
+    }
+  },
+}
+
+const LL_SHEETS = {
+  signup: () => ({
+    label: 'Create your landlord account',
+    html: `<p class="h2">Accept with a free account</p><p class="small">So rent has somewhere to go. No password: your phone’s face or fingerprint unlock signs you in.</p>
+      <div class="field"><label for="ll-name">Name</label><div class="input"><input id="ll-name" value="${P.landlordFull}"></div></div>
+      <div class="field"><label for="ll-mail">Email</label><div class="input"><input id="ll-mail" value="sam@example.com"></div></div>
+      <div class="actions">${S.ll.signing ? `<button class="btn btn-primary" disabled>Signing in…</button>` : btn('Accept with Face ID', 'll-accept', 'primary', 'face')}</div>
+      <p class="help" style="margin-top:10px">By accepting, you agree to the lease terms on the proof page and to the Stroop Resolution Desk for disagreements.</p>`,
+  }),
+  keys: () => ({
+    label: 'Keys handed over',
+    html: `<p class="h2">Mark the keys handed over?</p><p class="small">From now on, the family can’t take the rent back. Priya has 3 days to confirm or report a problem. If Priya says nothing, the lease starts and January is paid to you.</p>
+      <div class="actions">${btn('Yes, keys handed over', 'll-keys', 'primary', 'key')}${btn('Not yet', 'close-sheet', 'quiet', '', 'll')}</div>`,
+  }),
+  blocked: () => ({
+    label: 'Not due yet',
+    html: `<div class="lock-big shake">${icon('lock')}</div><p class="h2">${MONTH_FULL[L().paid]} isn’t due yet.</p><p class="small">It unlocks on ${nextMon()} 1. Nobody can release a month early: not you, not the family, not Stroop.</p>
+      <p class="small" style="margin-top:12px;display:flex;gap:6px;align-items:center">${icon('shield')}<span>The contract refused this request. <button class="link" data-act="noop">See it${icon('ext')}</button></span></p>
+      <div class="actions">${btn('Got it', 'close-sheet', 'primary', '', 'll')}</div>`,
+  }),
+  end: () => endSheet('ll'),
+  dispute: () => disputeSheet('ll'),
+}
+
+// ============ The money panel ============
+function renderVault() {
+  const l = L(), w = where(), n = months(), q = quote(S.fam.cur, n)
+  const draft = l.status === 'draft'
+  const lockedMonths = Math.round(w.locked / RENT)
+  const backMonths = Math.round(Math.max(0, w.back - (l.feeTaken ? 0 : RENT * n * FEE)) / RENT)
+  const anim = S.fresh
+  const blocks = (count, cls, animCls, newest) => Array.from({ length: count }, (_, i) => `<div class="blk ${cls} ${anim && i >= count - newest ? animCls : ''}"></div>`).join('')
+  const centerStack = draft ? Array.from({ length: n }, () => '<div class="blk ghost"></div>').join('') : `${blocks(lockedMonths, 'locked', '', 0)}${w.feeHeld ? '<div class="blk fee held" title="Stroop fee, held until move-in"></div>' : ''}`
+  const paidNew = anim === 'month' || anim === 'movein' ? 1 : 0
+  const backNew = anim === 'back' ? backMonths : 0
+  const headline = draft ? `<p class="big num">${usd(0)}</p><p class="small">Nothing locked yet</p>` : `<p class="big num">${usd(w.locked + w.feeHeld)}</p><p class="small">locked in Stroop</p>`
+  const fees = draft ? '' : `<div class="fees num"><div class="sec-title"><span>Fees so far, by who keeps them</span></div>
+    ${q.fx ? `<div class="r"><span>Exchange partner</span><span>${local(q.fx, S.fam.cur)}</span></div>` : ''}
+    <div class="r"><span>Stroop</span><span>${l.feeTaken ? usd(q.feeUsd) : w.feeHeld ? `${usd(0)} <span class="small">(${usd(q.feeUsd)} held)</span>` : usd(0)}</span></div>
+    ${S.ll.outTotal ? `<div class="r"><span>Cash-out partner</span><span>${cad(S.ll.outTotal / (1 - FX_OUT) * FX_OUT, true)}</span></div>` : ''}
+    <div class="r"><span>Stellar network</span><span>&lt;${usd(0.01, true)} · Stroop pays</span></div></div>`
+
+  let demo = ''
+  const actor = nextActor()
+  if (l.status === 'draft') demo = `<p class="small">Start on the family’s phone.</p>`
+  else if (l.status === 'funded') demo = `<p class="small">${l.linkSent ? 'Now the landlord opens the link.' : 'The family sends the proof link next.'}</p>`
+  else if (l.status === 'accepted' && !l.deadlinePassed) demo = `<p class="small">Try the bad case:</p>${btn('Skip past Jan 10 with no keys', 'clock-deadline', 'secondary', 'skip')}`
+  else if (l.status === 'active' && !l.endBy && l.paid < n) demo = btn(`Skip to ${MONTH_FULL[l.paid]} 1`, 'clock-month', 'secondary', 'skip')
+  if (actor === 'clock') demo = demo.replace('btn btn-secondary', 'btn btn-secondary glow')
+
+  document.getElementById('vault').innerHTML = `
+    <h2>Where the money is</h2>
+    <div class="v-total" aria-live="polite">${headline}</div>
+    <div class="cols" aria-hidden="true">
+      <div class="col"><div class="stack">${blocks(backMonths, 'back', 'in-l', backNew)}</div><div class="col-foot"><b>${usd(w.back)}</b><span>Back to the family</span></div></div>
+      <div class="col center"><div class="stack">${centerStack}</div><div class="col-foot"><b>${usd(w.locked + w.feeHeld)}</b><span>Locked</span></div></div>
+      <div class="col"><div class="stack">${blocks(l.paid, 'paid', 'in-r', paidNew)}</div><div class="col-foot"><b>${usd(w.paid)}</b><span>Paid to the landlord</span></div></div>
+    </div>
+    <p class="v-rule">Neither side holds it. The contract pays one month on each rent day and nothing early.</p>
+    ${fees}
+    <div class="demo">${demo}</div>`
+}
+
+// ============ Render ============
+function renderPhone(side) {
+  const st = S[side], screens = side === 'fam' ? FAM : LL, sheets = side === 'fam' ? FAM_SHEETS : LL_SHEETS
+  const el = document.getElementById(side)
+  const l = L(), sig = [st.screen, l.status, l.endBy, l.disputeBy, l.handedOver, l.deadlinePassed, l.paid, l.sentHome].join('|')
+  const prev = el.querySelector('.scroll'), keep = el.dataset.sig === sig && prev ? prev.scrollTop : 0
+  el.dataset.sig = sig
+  const v = screens[st.screen]()
+  el.className = 'screen ' + (v.cls || '')
+  el.dataset.screen = st.screen
+  el.innerHTML = `${side === 'fam' ? statusBar('9:41 PM', 'Mumbai') : statusBar('11:11 AM', 'Waterloo')}${v.head ?? (st.screen === 'welcome' || st.screen === 'locked' || st.screen === 'cashed' ? header({}) : '')}${v.body}${v.foot ? `<div class="foot">${v.foot}</div>` : ''}${st.sheet ? sheet(side, sheets[st.sheet]()) : ''}${toast(side)}`
+  const sc = el.querySelector('.scroll')
+  if (sc) sc.scrollTop = keep
+  if (st.sheet) el.querySelector('.sheet button:not(.link)')?.focus({ preventScroll: true })
+}
+
+function render() {
+  renderPhone('fam')
+  renderPhone('ll')
+  renderVault()
+  const a = nextActor()
+  document.getElementById('fam-next').innerHTML = a === 'fam' ? '<span class="next-pill">Next step</span>' : ''
+  document.getElementById('ll-next').innerHTML = a === 'll' ? '<span class="next-pill">Next step</span>' : ''
+  document.querySelectorAll('[data-panel]').forEach((p) => p.classList.toggle('on', p.dataset.panel === S.tab))
+  const tabs = [['fam', 'Family'], ['vault', 'The money'], ['ll', 'Landlord']]
+  document.getElementById('tabs').innerHTML = tabs
+    .map(([k, t]) => `<button role="tab" aria-selected="${S.tab === k}" data-act="tab" data-arg="${k}">${t}${a === k || (a === 'clock' && k === 'vault') ? '<span class="dot-n" aria-label="next step"></span>' : ''}</button>`)
+    .join('')
+  S.fresh = null
+}
+
+// ============ Motion helpers ============
+const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches
+const wait = (ms) => new Promise((r) => setTimeout(r, still() ? 0 : ms))
+/** A labelled amount flies from one place to another so cause and effect are visible on stage. */
+function fly(fromSel, toSel, label, kind = '') {
+  const a = document.querySelector(fromSel), b = document.querySelector(toSel)
+  if (!a || !b || still() || !a.offsetParent || !b.offsetParent) return
+  const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect()
+  const f = document.createElement('div')
+  f.className = 'flyer num ' + kind
+  f.textContent = label
+  document.body.appendChild(f)
+  const x0 = ra.left + ra.width / 2, y0 = ra.top + ra.height / 2, x1 = rb.left + rb.width / 2, y1 = rb.top + rb.height / 2
+  f.animate(
+    [
+      { transform: `translate(${x0}px, ${y0}px) translate(-50%, -50%) scale(.9)`, opacity: 0 },
+      { transform: `translate(${x0}px, ${y0}px) translate(-50%, -50%) scale(1)`, opacity: 1, offset: 0.15 },
+      { transform: `translate(${(x0 + x1) / 2}px, ${Math.min(y0, y1) - 60}px) translate(-50%, -50%)`, opacity: 1, offset: 0.6 },
+      { transform: `translate(${x1}px, ${y1}px) translate(-50%, -50%) scale(.85)`, opacity: 0 },
+    ],
+    { duration: 900, easing: 'cubic-bezier(.4,0,.2,1)' },
+  ).onfinish = () => f.remove()
+  f.style.left = '0'
+  f.style.top = '0'
+}
+const timers = {}
+function notify(side, t) {
+  S[side].toast = t
+  clearTimeout(timers[side])
+  timers[side] = setTimeout(() => { S[side].toast = null; render() }, 3400)
+}
+
+// ============ Actions ============
+const A = {
+  restart() { Object.values(timers).forEach(clearTimeout); const tab = S.tab; S = fresh(); S.tab = tab },
+  tab(k) { S.tab = k },
+  noop() {},
+  'fam-go'(s) { S.fam.screen = s },
+  'fam-back'() { S.fam.screen = { setup: 'welcome', review: 'setup' }[S.fam.screen] || 'welcome' },
+  months(d) { S.fam.months = Math.min(24, Math.max(1, S.fam.months + Number(d))) },
+  whatif(k) { S.fam.whatIf = k },
+  'fam-sheet'(k) { S.fam.sheet = k },
+  'll-sheet'(k) { S.ll.sheet = k },
+  'close-sheet'(side) { S[side].sheet = null },
+  'set-cur'(code) { S.fam.cur = code; S.fam.sheet = null },
+  async 'fam-pay'() {
+    S.fam.screen = 'paying'; S.fam.payStep = 0; render()
+    for (let i = 1; i <= 3; i++) { await wait(750); S.fam.payStep = i; render() }
+    await wait(350)
+    const q = quote(S.fam.cur, months())
+    L().status = 'funded'
+    log('fam', `Locked ${usd(q.lockUsd)} for ${P.landlordFull}`, usd(q.lockUsd))
+    fly('#fam .steps', '#vault .col.center', usd(q.lockUsd))
+    S.fam.screen = 'locked'
+    render()
+  },
+  'fam-send'() {
+    L().linkSent = true
+    S.fam.screen = 'home'
+    S.fresh = 'link'
+    notify('fam', { title: `Link sent to ${P.landlord}`, body: 'You’ll hear the moment it’s accepted.', icon: 'send' })
+    notify('ll', { title: P.studentFull, body: 'Here’s the proof. It’s all locked for you…', icon: 'send' })
+  },
+  'll-go'(s) { S.ll.screen = s },
+  'll-back'() { S.ll.screen = L().status === 'funded' ? 'messages' : 'home' },
+  'll-home'() { S.ll.screen = 'home' },
+  async 'll-accept'() {
+    S.ll.signing = true; render(); await wait(700)
+    S.ll.signing = false; S.ll.sheet = null; S.ll.screen = 'home'
+    L().status = 'accepted'
+    log('ll', `${P.landlordFull} accepted the lease`)
+    notify('ll', { title: 'Lease accepted', body: 'Hand over the keys on move-in day.' })
+    notify('fam', { title: `${P.landlord} accepted your lease`, body: 'Confirm move-in once you have the keys.' })
+  },
+  'll-keys'() {
+    L().handedOver = true; S.ll.sheet = null
+    log('ll', 'Keys marked as handed over', '', 'event')
+    notify('fam', { title: `${P.landlord} handed over the keys`, body: 'Confirm move-in or report a problem.', icon: 'key' })
+  },
+  'fam-movein'() {
+    const l = L()
+    l.status = 'active'; l.paid = 1; l.feeTaken = true; S.fam.sheet = null
+    S.ll.balance += RENT
+    log('fam', `Move-in confirmed. January paid to ${P.landlord}`, usd(RENT))
+    log('fam', 'Stroop’s 1% fee taken', usd(RENT * months() * FEE))
+    S.fresh = 'movein'
+    notify('fam', { title: 'Welcome home', body: `January is paid to ${P.landlord}.`, icon: 'key' })
+    notify('ll', { title: `${usd(RENT)} received`, body: `January rent from ${P.studentFull}.`, icon: 'coins' })
+    setTimeout(() => fly('#vault .col.center', '#ll .scroll', usd(RENT), 'paid'), 30)
+  },
+  'll-early'() { S.ll.sheet = 'blocked'; log('ll', `Early payout of ${MONTH_FULL[L().paid]} refused by the contract`, '', 'event') },
+  'clock-month'() {
+    const l = L()
+    l.paid += 1; S.ll.balance += RENT
+    S.fresh = 'month'
+    log('ll', `${MONTH_FULL[l.paid - 1]} rent paid to ${P.landlord}`, usd(RENT))
+    if (l.paid >= months()) l.status = 'completed'
+    notify('ll', { title: `${usd(RENT)} received`, body: `${MONTH_FULL[l.paid - 1]} rent, on time.`, icon: 'coins' })
+    notify('fam', { title: `${MONTH_FULL[l.paid - 1]} rent paid`, body: `${l.paid} of ${months()} months done.` })
+    setTimeout(() => fly('#vault .col.center', '#ll .scroll', usd(RENT), 'paid'), 30)
+  },
+  'clock-deadline'() {
+    L().deadlinePassed = true
+    notify('fam', { title: 'No keys by Jan 10', body: 'You can take all your rent back.', icon: 'alert' })
+  },
+  'fam-reclaim'() {
+    const l = L(), w = where()
+    l.back = w.locked + w.feeHeld; l.status = 'refunded'; S.fam.sheet = null
+    S.fresh = 'back'
+    log('fam', 'Full refund to the family, fee included', usd(l.back))
+    notify('fam', { title: `${usd(l.back)} is back`, body: 'Fee included.', icon: 'undo' })
+    setTimeout(() => fly('#vault .col.center', '#fam .scroll', usd(l.back), 'back'), 30)
+  },
+  'fam-sendhome'() {
+    L().sentHome = true
+    notify('fam', { title: 'On its way to your bank', icon: 'bank' })
+  },
+  'end-propose'(side) {
+    L().endBy = side; S[side].sheet = null
+    const other = side === 'fam' ? 'll' : 'fam'
+    notify(other, { title: 'Request to end early', body: `After ${MONTH_FULL[L().paid - 1]}. Open to agree or decline.`, icon: 'door' })
+  },
+  'end-agree'() {
+    const l = L(), w = where()
+    l.back = w.locked; l.status = 'ended'; l.endBy = null
+    S.fresh = 'back'
+    log('fam', `Lease ended after ${MONTH_FULL[l.paid - 1]}. Unpaid rent back to the family`, usd(l.back), 'event')
+    notify('fam', { title: `${usd(l.back)} is back`, body: 'Unpaid rent returned.', icon: 'undo' })
+    notify('ll', { title: 'Lease ended', body: `You keep ${usd(w.paid)} paid so far.`, icon: 'door' })
+    setTimeout(() => fly('#vault .col.center', '#fam .scroll', usd(l.back), 'back'), 30)
+  },
+  'end-decline'(side) { L().endBy = null; notify(side === 'fam' ? 'll' : 'fam', { title: 'Request declined', body: 'The lease continues.', icon: 'x' }) },
+  'end-withdraw'() { L().endBy = null },
+  dispute(side) {
+    const l = L(); l.status = 'disputed'; l.disputeBy = side; S[side].sheet = null
+    log(side, 'Problem reported. Payments paused', '', 'event')
+    notify(side === 'fam' ? 'll' : 'fam', { title: 'Payments paused', body: 'A problem was reported. The mediator will reach out.', icon: 'pause' })
+  },
+  'dispute-withdraw'() { const l = L(); l.status = l.paid > 0 ? 'active' : 'accepted'; l.disputeBy = null; log('fam', 'Report withdrawn. Payments resumed', '', 'event') },
+  'll-cashout'() {
+    const o = cashOut(S.ll.balance)
+    S.ll.cashing = o.net; S.ll.outTotal += o.net
+    log('ll', `Cashed out to ${P.bank}`, cad(o.net), 'event')
+    S.ll.balance = 0; S.ll.screen = 'cashed'
+  },
+}
+
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-act]')
+  if (!t) return
+  // Clicks inside a sheet shouldn't fall through to the backdrop's close action.
+  if (t.classList.contains('sheet-wrap') && e.target.closest('[data-stop]')) return
+  const fn = A[t.dataset.act]
+  if (!fn) return
+  const r = fn(t.dataset.arg)
+  if (!(r instanceof Promise)) render()
+})
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return
+  for (const side of ['fam', 'll']) if (S[side].sheet && !S.ll.signing) S[side].sheet = null
+  render()
+})
+render()
+</script>
+</body>
+</html>
