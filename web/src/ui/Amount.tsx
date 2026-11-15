@@ -2,19 +2,20 @@ import { fromUnits } from '../stellar'
 import { useTween } from '../hooks'
 import { fmtMoney } from '../money'
 
-/** A big US$ amount that eases to new values, so money visibly moves when it moves. */
-export function Amount({ units, size }: { units: bigint | number; size?: 'md' }) {
+/** A big amount that eases to new values, so money visibly moves when it moves. US$ units by default. */
+export function Amount({ units, code = 'USD', size }: { units: bigint | number; code?: string; size?: 'md' }) {
   const target = typeof units === 'bigint' ? fromUnits(units) : units
   const shown = useTween(target)
-  const digits = fmtMoney(shown, 'USD', { cents: true }).replace('US$', '')
-  const dot = digits.lastIndexOf('.')
+  const text = fmtMoney(shown, code, { cents: true })
+  const first = text.search(/\d/)
+  const dot = text.lastIndexOf('.')
   return (
     <span className={`amount${size ? ` ${size}` : ''}`}>
-      <span className="sr-only">{fmtMoney(target, 'USD', { cents: true })}</span>
+      <span className="sr-only">{fmtMoney(target, code, { cents: true })}</span>
       <span aria-hidden>
-        <span className="cur">US$</span>
-        {digits.slice(0, dot)}
-        <span className="cents">{digits.slice(dot)}</span>
+        <span className="cur">{text.slice(0, first)}</span>
+        {text.slice(first, dot)}
+        <span className="cents">{text.slice(dot)}</span>
       </span>
     </span>
   )

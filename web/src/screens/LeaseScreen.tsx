@@ -13,13 +13,12 @@ import {
   getKeypair,
   logTx,
   periodsDue,
-  secsToNextRelease,
   short,
   txsFor,
 } from '../stellar'
 import { useHomeCurrency, useLease, useNow, verifyLink } from '../hooks'
-import { fmtClock, fmtDate, fmtDuration, headline } from '../leaseText'
-import { currency, fmtMoney, offRampQuote } from '../money'
+import { fmtDate, fmtDuration, headline } from '../leaseText'
+import { ON_RAMP_FEE, currency, fmtMoney, offRampQuote } from '../money'
 import { mediatorName } from '../mediators'
 import { type Action, leaseActions } from '../components/leaseActions'
 import { useToast } from '../components/useToast'
@@ -84,7 +83,6 @@ function LeaseDetail({ lease, role, onChange }: { lease: Lease; role: Role; onCh
   const txs = txsFor(lease.id)
   const proof = () => share(verifyLink(lease.id), 'Proof link', 'Send it to your landlord.')
   const home = currency(code)
-  const secs = secsToNextRelease(lease, now)
 
   const run = async (a: Action) => {
     setConfirm(null)
@@ -131,7 +129,7 @@ function LeaseDetail({ lease, role, onChange }: { lease: Lease; role: Role; onCh
             <Amount units={lease.held} />
             <span className="approx">
               {family && home.code !== 'USD' && `≈ ${fmtMoney((Number(lease.held) / 1e7) * home.perUsd, home.code)} · `}
-              {fmtUSD(lease.rent).replace('.00', '')} a month · {lease.periods} months
+              {fmtUSD(lease.rent)} a month · {lease.periods} months
             </span>
             <div className="hero-foot">
               <Status {...h} />
@@ -139,10 +137,7 @@ function LeaseDetail({ lease, role, onChange }: { lease: Lease; role: Role; onCh
             {blockedAt === lease.paidPeriods && periodsDue(lease, now) === 0 && (
               <p className="callout locked" role="status" style={{ marginTop: 14 }}>
                 <LockKeyhole size={17} aria-hidden />
-                <span>
-                  Refused. Month {lease.paidPeriods + 1} unlocks in {secs === null ? '—' : fmtClock(secs)}. Nobody can pay out
-                  early, not even Stroop.
-                </span>
+                <span>Refused. Nobody can pay out early, not even Stroop.</span>
               </p>
             )}
             {family && lease.status === 'Funded' && (
@@ -186,12 +181,14 @@ function LeaseDetail({ lease, role, onChange }: { lease: Lease; role: Role; onCh
 
           <h2 className="section-title">
             <span>Months</span>
-            {secs !== null && <span className="num">Next in {fmtClock(secs)}</span>}
           </h2>
           <section className="glass card">
             <MonthTiles lease={lease} now={now} shake={shake} />
             <div className="tiles-meta">
-              <span>{lease.paidPeriods} paid</span>
+              <span>
+                {lease.paidPeriods} paid
+                {periodsDue(lease, now) > 0 && ` · ${periodsDue(lease, now)} ready to ${family ? 'pay out' : 'collect'}`}
+              </span>
               <span>
                 {lease.status === 'Funded' || lease.status === 'Accepted'
                   ? 'Month 1 pays at move-in'
@@ -332,16 +329,23 @@ function ConfirmSheet(props: {
   const rent = fmtUSD(l.rent)
   const fee = feeFor(l.rent * BigInt(l.periods))
   const owed = l.rent * BigInt(periodsDue(l, now))
+  const [code] = useHomeCurrency()
+  // Refunds land in US$; sending them home costs another exchange, so show what actually arrives.
+  const home = (units: bigint) =>
+    code === 'USD'
+      ? undefined
+      : `≈ ${fmtMoney((Number(units) / 1e7) * currency(code).perUsd * (1 - ON_RAMP_FEE), code)} in your bank after ~1% exchange`
   const spec: { title: string; lede?: string; rows: [string, string, string?][]; cta: string; danger?: boolean } = (() => {
     switch (a.id) {
       case 'accept':
         return {
           title: 'Accept this lease?',
-          lede: `Your tenant must move in by ${fmtDate(l.moveInBy)}.`,
+          lede: `Your tenant must move in by ${fmtDate(l.moveInBy)}`,
           rows: [
             ['Each month', rent, `≈ ${fmtMoney(offRampQuote(Number(l.rent) / 1e7).receive, 'CAD')} in your bank`],
             ['Term', `${l.periods} months`],
             ['Stroop’s fee for you', 'None'],
+            ['Rent is set in US$', 'C$ moves with the rate'],
           ],
           cta: 'Accept lease',
         }
@@ -368,7 +372,7 @@ function ConfirmSheet(props: {
         return {
           title: 'Take your rent back?',
           lede: 'The lease is cancelled. Nothing is charged.',
-          rows: [['Back to your balance', fmtUSD(l.held + l.fee)]],
+          rows: [['Back to your balance', fmtUSD(l.held + l.fee), home(l.held + l.fee)]],
           cta: 'Take it back',
         }
       case 'end':

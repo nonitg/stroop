@@ -33,7 +33,7 @@ export function LeaseHero({
       <Amount units={lease.held} />
       <span className="approx">
         {home && home.code !== 'USD' ? `≈ ${fmtMoney(held * home.perUsd, home.code)} · ` : ''}
-        {fmtUSD(lease.rent).replace('.00', '')} a month
+        {fmtUSD(lease.rent)} a month
       </span>
       <MoneyBar slices={slices} thin />
       <KeyRow slices={slices} />
@@ -69,11 +69,11 @@ export function LeaseRow({ lease, role, me }: { lease: Lease; role: Role; me: st
       <span className="txt">
         <strong>{h.title}</strong>
         <span>
-          Lease {lease.id} · {fmtUSD(lease.rent).replace('.00', '')}/mo
+          Lease {lease.id} · {fmtUSD(lease.rent)}/mo
         </span>
       </span>
       <span className="end">
-        {fmtUSD(lease.held).replace('.00', '')}
+        {fmtUSD(lease.held)}
         <small>locked</small>
       </span>
       <ChevronRight className="chev" size={18} aria-hidden />

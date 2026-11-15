@@ -86,7 +86,7 @@ export function NewLease({ to }: { to?: string }) {
           </span>
           <h1 style={{ margin: '0 0 10px' }}>Rent locked.</h1>
           <p className="lede" style={{ margin: '0 auto' }}>
-            Send your landlord the proof link. They’ll see {fmtUSD(lockUnits).replace('.00', '')} waiting for them.
+            Send your landlord the proof link. They’ll see {fmtUSD(lockUnits)} waiting for them.
           </p>
           <div style={{ display: 'grid', gap: 10, width: '100%', marginTop: 32 }}>
             <button className="btn primary" onClick={() => share(verifyLink(created), 'Proof link', 'Send it to your landlord.')}>
@@ -120,7 +120,7 @@ export function NewLease({ to }: { to?: string }) {
       {step === 0 && (
         <>
           <h1 className="q">Who’s your landlord?</h1>
-          <p className="q-sub">Paste their Stroop ID. Landlords find it under Account.</p>
+          <p className="q-sub">Open the invite link they sent, or paste their Stroop ID.</p>
           <div className="field">
             <label htmlFor="landlord">Landlord’s Stroop ID</label>
             <input
@@ -220,7 +220,6 @@ export function NewLease({ to }: { to?: string }) {
           mediator={mediator}
           onMediator={() => setSheet('mediator')}
           onCurrency={() => setSheet('currency')}
-          balance={balance}
         >
           {error && <Problem text={error} />}
           <div className="footer-cta">
@@ -231,13 +230,16 @@ export function NewLease({ to }: { to?: string }) {
                 ) : (
                   <LockKeyhole size={18} aria-hidden />
                 )}
-                {busy === 'lock' ? 'Locking on Stellar…' : `Lock ${fmtUSD(lockUnits).replace('.00', '')}`}
+                {busy === 'lock' ? 'Locking on Stellar…' : `Lock ${fmtMoney(quoteLease(rentNum, months, code).pay, code)}`}
               </button>
             ) : (
               <button className="btn primary wide" onClick={() => setSheet('add')}>
                 <Plus size={18} aria-hidden /> Add money to continue
               </button>
             )}
+            <p className="fine" style={{ marginTop: 8 }}>
+              {fmtUSD(lockUnits)} held for your landlord · testnet uses your test balance
+            </p>
           </div>
         </Review>
       )}
@@ -256,18 +258,8 @@ export function NewLease({ to }: { to?: string }) {
   )
 }
 
-/** Where your money goes, in your own currency: what leaves the bank, and who keeps each part. */
-function Review(props: {
-  rent: number
-  months: number
-  code: string
-  mediator: string
-  balance: number
-  onMediator: () => void
-  onCurrency: () => void
-  children: ReactNode
-}) {
-  const { rent, months, code, mediator, balance, onMediator, onCurrency, children } = props
+/** What leaves the family's bank for this lease, split by who keeps each part, in their own currency. */
+function quoteLease(rent: number, months: number, code: string) {
   const usdRent = rent * months
   const usdFee = fromUnits(feeFor(toUnits(usdRent)))
   const usdNet = LOCK_FEE_XLM * XLM_USD
@@ -298,9 +290,24 @@ function Review(props: {
     value: usdNet * perUsd,
     label: 'Network fee',
     who: 'Stellar',
-    amount: fmtMoney(usdNet * perUsd, code, { cents: true }),
+    amount: fmtMoney(usdNet * perUsd, code, { cents: usdNet * perUsd < 1 }),
   })
-  const ofHundred = Math.floor(((usdRent * perUsd) / pay) * 100)
+  return { slices, pay, perUsd, ofHundred: Math.floor(((usdRent * perUsd) / pay) * 100) }
+}
+
+/** Where your money goes: the one number that leaves your bank, then who keeps each part. */
+function Review(props: {
+  rent: number
+  months: number
+  code: string
+  mediator: string
+  onMediator: () => void
+  onCurrency: () => void
+  children: ReactNode
+}) {
+  const { rent, months, code, mediator, onMediator, onCurrency, children } = props
+  const { slices, pay, perUsd, ofHundred } = quoteLease(rent, months, code)
+  const local = (n: number) => fmtMoney(n, code)
   return (
     <>
       <h1 className="q">Where your money goes</h1>
@@ -320,8 +327,7 @@ function Review(props: {
         <MoneyBar slices={slices} />
         <Ledger slices={slices} total={{ label: 'You pay', amount: local(pay) }} />
         <p className="callout locked" style={{ marginTop: 12 }}>
-          {code === 'USD' ? `US$${ofHundred}` : local(ofHundred)} of every {code === 'USD' ? 'US$100' : local(100)} becomes rent.
-          Stroop earns no interest and no exchange markup.
+          {local(ofHundred)} of every {local(100)} becomes rent.
         </p>
       </section>
       <ul className="list glass" style={{ marginTop: 14 }}>
@@ -338,17 +344,8 @@ function Review(props: {
           <div className="row">
             <span className="txt">
               <strong>No move-in?</strong>
-              <span>Rent and Stroop’s fee come back to you.</span>
+              <span>Rent and Stroop’s fee come back. Exchange fees don’t.</span>
             </span>
-          </div>
-        </li>
-        <li>
-          <div className="row">
-            <span className="txt">
-              <strong>Paying from</strong>
-              <span>Stroop balance · test money</span>
-            </span>
-            <span className="end">{fmtMoney(balance, 'USD')}</span>
           </div>
         </li>
       </ul>

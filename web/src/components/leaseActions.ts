@@ -135,7 +135,14 @@ function landlordActions(lease: Lease, kp: Keypair, now: number): Action[] {
     })
   // Demo of the core protection: with nothing due, the contract refuses to pay out.
   if (lease.status === 'Active' && due === 0)
-    actions.push({ id: 'early', label: 'Collect next month early', done: 'Rent collected', tier: 'secondary', Icon: LockKeyhole, run: release })
+    actions.push({
+      id: 'early',
+      label: 'Collect next month early',
+      done: 'Rent collected',
+      tier: 'quiet',
+      Icon: LockKeyhole,
+      run: release,
+    })
   if (lease.landlordOwed > 0n)
     actions.push({
       id: 'claim',

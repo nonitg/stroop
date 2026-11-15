@@ -7,6 +7,7 @@ import {
   fmtUSD,
   proposalOpen,
   proposalWindowSecs,
+  periodsDue,
   secsToNextRelease,
   startsOnRelease,
 } from './stellar'
@@ -59,7 +60,11 @@ export function headline(l: Lease, role: Role, me: string, now: number): { title
   if (l.status === 'Active' && proposalOpen(l, now)) {
     const left = clock(l.endProposedAt + proposalWindowSecs(l) - now)
     return l.endProposedBy === me
-      ? { title: `Waiting for ${family ? 'your landlord' : 'your tenant'} to agree`, sub: `Your request to end early lapses in ${left}.`, mood: 'wait' }
+      ? {
+          title: `Waiting for ${family ? 'your landlord' : 'your tenant'} to agree`,
+          sub: `Your request to end early lapses in ${left}.`,
+          mood: 'wait',
+        }
       : { title: `${other} wants to end early`, sub: `Agree within ${left}, or the lease simply continues.`, mood: 'you' }
   }
 
@@ -89,6 +94,19 @@ export function headline(l: Lease, role: Role, me: string, now: number): { title
     }
     case 'Active': {
       const secs = secsToNextRelease(l, now)
+      const due = periodsDue(l, now)
+      if (due > 0)
+        return family
+          ? {
+              title: `Month ${l.paidPeriods} of ${l.periods} paid`,
+              sub: `Month ${l.paidPeriods + 1} is on its way to your landlord.`,
+              mood: 'good',
+            }
+          : {
+              title: `${fmtUSD(l.rent * BigInt(due))} ready to collect`,
+              sub: `Month ${l.paidPeriods} of ${l.periods} paid so far.`,
+              mood: 'you',
+            }
       return {
         title: `Month ${l.paidPeriods} of ${l.periods} paid`,
         sub: secs === null ? 'The last month is paid out.' : `Next rent ${family ? 'pays' : 'unlocks'} in ${clock(secs)}.`,
@@ -102,7 +120,11 @@ export function headline(l: Lease, role: Role, me: string, now: number): { title
     case 'Ended':
       return { title: 'Ended early', sub: family ? 'Unused rent came back to you.' : 'Rent owed was paid to you.', mood: 'wait' }
     case 'Refunded':
-      return { title: 'Refunded', sub: family ? 'Everything came back to you.' : 'The rent went back to the family.', mood: 'wait' }
+      return {
+        title: 'Refunded',
+        sub: family ? 'Everything came back to you.' : 'The rent went back to the family.',
+        mood: 'wait',
+      }
     default:
       return { title: String(l.status), mood: 'wait' }
   }

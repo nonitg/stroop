@@ -3,8 +3,8 @@ import { Landmark, LockKeyhole, Plus, Share } from 'lucide-react'
 import { useApp } from '../app'
 import { fmtUSD, secsToNextRelease } from '../stellar'
 import { inviteLink, useHomeCurrency, useNow } from '../hooks'
-import { CAD, currency, fmtMoney } from '../money'
-import { fmtClock } from '../leaseText'
+import { currency, fmtMoney, offRampQuote } from '../money'
+import { fmtClock, headline } from '../leaseText'
 import { Amount } from '../ui/Amount'
 import { Brand } from '../ui/BrandMark'
 import { LeaseHero, LeaseRow, featured } from '../ui/LeaseCards'
@@ -52,7 +52,7 @@ export function FamilyHome() {
             Start
           </a>
           <p className="fine" style={{ marginTop: 14 }}>
-            {fmtUSD(BigInt(Math.round((wallet.balances?.usdc ?? 0) * 1e7))).replace('.00', '')} test money ready
+            {fmtUSD(BigInt(Math.round((wallet.balances?.usdc ?? 0) * 1e7)))} test money ready
           </p>
         </section>
       )}
@@ -86,6 +86,8 @@ export function LandlordHome() {
     .map((l) => secsToNextRelease(l, now))
     .filter((s): s is number => s !== null)
     .sort((a, b) => a - b)[0]
+  // A lease waiting on the landlord goes first: that's the one thing to do.
+  const urgent = leases?.find((l) => headline(l, 'landlord', me, now).mood === 'you')
   const invite = () => share(inviteLink(me), 'Invite link', 'Send it to your tenant. Their lease will be set up for you.')
   return (
     <main className="screen">
@@ -99,17 +101,19 @@ export function LandlordHome() {
         </button>
       </div>
 
-      <section className="glass card hero-card syrup">
-        <span className="label">Your balance</span>
-        <Amount units={usdc} />
-        <span className="approx">≈ {fmtMoney(usdc * CAD.perUsd, 'CAD')}</span>
+      {urgent && <LeaseHero lease={urgent} role="landlord" me={me} />}
+
+      <section className={`glass card hero-card${urgent ? '' : ' syrup'}`} style={urgent ? { marginTop: 14 } : undefined}>
+        <span className="label">Ready to cash out</span>
+        <Amount units={offRampQuote(usdc).receive} code="CAD" />
+        <span className="approx">{fmtMoney(usdc, 'USD', { cents: usdc % 1 !== 0 })} held · after the 0.5% cash-out fee</span>
         <button className="btn primary wide" onClick={() => setCashing(true)}>
           <Landmark size={18} aria-hidden /> Cash out
         </button>
         {locked > 0n && (
           <div className="hero-foot">
             <span className="small" style={{ flex: 1 }}>
-              <strong style={{ color: 'var(--ink)' }}>{fmtUSD(locked).replace('.00', '')}</strong> locked for you
+              <strong style={{ color: 'var(--ink)' }}>{fmtUSD(locked)}</strong> locked for you
             </span>
             {nextSecs !== undefined && <span className="chip num">Next rent {fmtClock(nextSecs)}</span>}
           </div>
@@ -126,15 +130,17 @@ export function LandlordHome() {
           </button>
         </section>
       )}
-      {!!leases?.length && (
+      {leases && leases.some((l) => l !== urgent) && (
         <>
           <h2 className="section-title">Leases</h2>
           <ul className="list glass">
-            {leases.map((l) => (
-              <li key={l.id}>
-                <LeaseRow lease={l} role="landlord" me={me} />
-              </li>
-            ))}
+            {leases
+              .filter((l) => l !== urgent)
+              .map((l) => (
+                <li key={l.id}>
+                  <LeaseRow lease={l} role="landlord" me={me} />
+                </li>
+              ))}
           </ul>
         </>
       )}

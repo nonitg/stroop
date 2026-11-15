@@ -70,7 +70,7 @@ export const explorer = {
 
 export const toUnits = (dollars: number) => BigInt(Math.round(dollars * 100)) * (UNIT / 100n)
 export const fromUnits = (units: bigint) => Number(units) / Number(UNIT)
-export const fmtUSD = (units: bigint) => fmtMoney(fromUnits(units), 'USD', { cents: true })
+export const fmtUSD = (units: bigint) => fmtMoney(fromUnits(units), 'USD', { cents: units % (UNIT / 1n) !== 0n })
 export const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`
 
 // ---------- Demo wallets (testnet only; production would use passkey smart wallets) ----------

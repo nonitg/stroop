@@ -12,7 +12,7 @@ export function leaseSlices(l: Lease, role: Role): Slice[] {
       tone: 'locked',
       value: fromUnits(t.locked),
       label: 'Locked',
-      who: 'Released one month at a time',
+      who: 'Paid out monthly',
       amount: fmtUSD(t.locked),
     },
     { tone: 'back', value: fromUnits(t.returned), label: family ? 'Back to you' : 'Back to family', amount: fmtUSD(t.returned) },

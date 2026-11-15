@@ -54,7 +54,7 @@ export function Proof({ id, back }: { id: number; back?: boolean }) {
       {top}
       <h1 className="page-title">Proof of rent</h1>
       <section className="glass card hero-card syrup">
-        <span className="label">Locked for the landlord · lease {lease.id}</span>
+        <span className="label">Locked for the landlord · Lease {lease.id}</span>
         <Amount units={lease.held} />
         <span className="approx">Checked just now. Nobody can move it early.</span>
         <MonthTiles lease={lease} now={now} />
@@ -66,7 +66,7 @@ export function Proof({ id, back }: { id: number; back?: boolean }) {
         <div>
           <dt>Each month</dt>
           <dd>
-            {fmtUSD(lease.rent).replace('.00', '')}
+            {fmtUSD(lease.rent)}
             <small>
               ≈ {fmtMoney(monthly.receive, 'CAD')} in the bank after a 0.5% cash-out fee (
               {fmtMoney(monthly.fee, 'CAD', { cents: true })})
@@ -79,7 +79,7 @@ export function Proof({ id, back }: { id: number; back?: boolean }) {
         </div>
         <div>
           <dt>Paid so far</dt>
-          <dd>{fmtUSD(lease.rent * BigInt(lease.paidPeriods)).replace('.00', '')}</dd>
+          <dd>{fmtUSD(lease.rent * BigInt(lease.paidPeriods))}</dd>
         </div>
         {(lease.status === 'Funded' || lease.status === 'Accepted') && (
           <div>
