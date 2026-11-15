@@ -301,8 +301,14 @@ h1, h2, h3, p { margin: 0; }
 .proof-head { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
 .facts { margin-top: 18px; }
 .facts .r { display: flex; justify-content: space-between; gap: 12px; padding: 11px 0; border-top: 1px solid var(--line); font-size: 15px; }
-.facts .r span:first-child { color: var(--ink-2); white-space: nowrap; }
-.facts .r span:last-child { font-weight: 600; text-align: right; }
+.facts .r > span:first-child { color: var(--ink-2); white-space: nowrap; }
+.facts .r > span:last-child { font-weight: 600; text-align: right; }
+.facts .sub { display: block; font-weight: 400; font-size: 13.5px; color: var(--ink-2); }
+.switch { width: 44px; height: 26px; border-radius: 13px; background: var(--line-2); position: relative; flex: none; transition: background .2s; }
+.switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .2s var(--ease); }
+[aria-checked="true"] .switch { background: var(--back); }
+.list-btn .switch { flex: none; }
+[aria-checked="true"] .switch::after { transform: translateX(18px); }
 .rules { display: grid; gap: 10px; margin-top: 4px; }
 .rule { display: grid; grid-template-columns: 22px 1fr; gap: 10px; font-size: 14.5px; }
 .rule svg.i { width: 20px; height: 20px; color: var(--ink); margin-top: 1px; }
@@ -465,6 +471,9 @@ function quote(code, months = MONTHS) {
 }
 /** "₹88.50": the exchange rate, with as many decimals as it needs. */
 const rate = (code) => new Intl.NumberFormat(CUR[code].locale, { style: 'currency', currency: code, currencyDisplay: 'narrowSymbol', maximumFractionDigits: 2 }).format(CUR[code].rate)
+/** Sending US$ back to the family's bank: the exchange fee again, and what lands. */
+const toHome = (u) => { const c = CUR[S.fam.cur], gross = u * c.rate, fee = S.fam.cur === 'USD' ? 0 : gross * FX_IN; return { fee, net: gross - fee } }
+const homeNote = (u) => (S.fam.cur === 'USD' ? '' : `<span class="small">About ${local(toHome(u).net, S.fam.cur)} in your bank after the exchange fee</span>`)
 const esc = (v) => String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
 const mediatorName = () => (S.fam.mediator === 'own' ? 'Your chosen mediator' : 'Stroop Resolution Desk')
 const cashOut = (u) => { const gross = u * CAD, fee = gross * FX_OUT; return { gross, fee, net: gross - fee } }
@@ -473,7 +482,7 @@ const cashOut = (u) => { const gross = u * CAD, fee = gross * FX_OUT; return { g
 function fresh() {
   return {
     fam: { screen: 'welcome', cur: 'INR', months: MONTHS, sheet: null, toast: null, whatIf: 'fake', payStep: 0, mediator: 'desk', form: { landlord: 'Sam Tremblay', address: '41 Columbia St W, Unit 4', rent: '1,000', moveIn: 'January 10, 2027' } },
-    ll: { screen: 'messages', sheet: null, toast: null, balance: 0, cashing: 0, outTotal: 0, signing: false },
+    ll: { screen: 'messages', sheet: null, toast: null, balance: 0, cashing: 0, outTotal: 0, signing: false, auto: false },
     lease: { status: 'draft', linkSent: false, paid: 0, feeTaken: false, back: 0, deadlinePassed: false, handedOver: false, endBy: null, disputeBy: null, sentHome: false },
     log: [], tab: 'fam', fresh: null,
   }
@@ -583,14 +592,15 @@ function moneyNow(view) {
   if (!over) rows.push(['k-locked', fam ? 'Locked until each month is due' : 'Locked for you, paid monthly', usd(w.locked + (fam ? w.feeHeld : 0)), w.locked + (fam ? w.feeHeld : 0), fam && w.feeHeld ? `Includes ${usd(w.feeHeld)} fee, taken only at move-in` : ''])
   if (w.back) rows.push(['k-back', fam ? 'Back to you' : 'Back to the family', usd(w.back), w.back])
   const total = rows.reduce((s, r) => s + r[3], 0) || 1
+  const approx = (n) => (fam && S.fam.cur !== 'USD' ? `<span class="sub">≈ ${local(n * CUR[S.fam.cur].rate, S.fam.cur)}</span>` : '')
   return `<div class="bar" aria-hidden="true">${rows.filter((r) => r[3] > 0).map((r) => `<span class="${r[0]}" style="flex-grow:${r[3] / total}"></span>`).join('')}</div>
-  <div class="ledger num">${rows.map((r) => `<div class="r"><span class="key ${r[0]}"></span><span class="lbl">${r[1]}${r[4] ? `<span class="sub">${r[4]}</span>` : ''}</span><span class="amt">${r[2]}</span></div>`).join('')}</div>`
+  <div class="ledger num">${rows.map((r) => `<div class="r"><span class="key ${r[0]}"></span><span class="lbl">${r[1]}${r[4] ? `<span class="sub">${r[4]}</span>` : ''}</span><span class="amt">${r[2]}${approx(r[3])}</span></div>`).join('')}</div>`
 }
 
 function activity(view) {
   const items = S.log.filter((e) => view === 'fam' || e.who !== 'fam-only').slice(0, 5)
   if (!items.length) return ''
-  return `<div class="sec"><div class="sec-title"><span>Activity</span><span>Every step is public on Stellar</span></div><div class="act num">${items
+  return `<div class="sec"><div class="sec-title"><span>Activity</span><span>Each step has a receipt</span></div><div class="act num">${items
     .map((e) => `<div class="r"><div>${e.text}<div class="when">${e.when} · <a class="rcpt" href="${RECORD}" target="_blank" rel="noreferrer">Receipt ${icon('ext')}</a></div></div><div class="amt">${e.amt}</div></div>`)
     .join('')}</div></div>`
 }
@@ -612,15 +622,15 @@ const FAM = {
       body: `<div class="scroll">
         <h1 class="h1" style="margin-top:18px">Don’t wire a year of rent to a stranger.</h1>
         <p class="lede">Lock it with Stroop instead. Your landlord can see it’s there and gets paid one month at a time.</p>
-        <div class="risk num" aria-label="How much a stranger holds before you arrive">
-          <div><div class="lbl"><span>Wire it upfront</span><span>${local(q.total, S.fam.cur)}</span></div><div class="track"><div class="fill" style="width:100%"></div></div></div>
-          <div><div class="lbl"><span>Lock it with Stroop</span><span>${local(0, S.fam.cur)}</span></div><div class="track"><div class="fill" style="width:0"></div></div></div>
-          <p class="risk-caption">What a landlord you’ve never met holds before you get the keys.</p>
+        <div class="risk num">
+          <p class="h3">Before you get the keys, a landlord you’ve never met holds:</p>
+          <div><div class="lbl"><span>If you wire it upfront</span><span>${local(q.total, S.fam.cur)}</span></div><div class="track"><div class="fill" style="width:100%"></div></div></div>
+          <div><div class="lbl"><span>If you lock it with Stroop</span><span>${local(0, S.fam.cur)}</span></div><div class="track"><div class="fill" style="width:0"></div></div></div>
         </div>
         <div class="sec card">
           <div class="rules">
             <div class="rule">${icon('lock')}<span><b>Locked, not handed over.</b> Paid out one month at a time, never early.</span></div>
-            <div class="rule">${icon('undo')}<span><b>Fake listing?</b> No keys, no rent. It all comes back.</span></div>
+            <div class="rule">${icon('undo')}<span><b>Fake listing?</b> No keys, no rent. Your rent and Stroop’s fee come back.</span></div>
             <div class="rule">${icon('coins')}<span><b>1% fee</b>, only once you’ve moved in.</span></div>
           </div>
         </div>
@@ -636,7 +646,7 @@ const FAM = {
         <p class="small">Step 1 of 2</p>
         <div class="field"><label for="f-landlord">Landlord</label><div class="input"><input id="f-landlord" name="landlord" data-field="landlord" autocomplete="off" value="${esc(form.landlord)}"></div></div>
         <div class="field"><label for="f-address">Home in Canada</label><div class="input"><input id="f-address" name="address" data-field="address" autocomplete="off" value="${esc(form.address)}"></div></div>
-        <div class="field"><label for="rent">Rent each month</label><div class="input num"><span class="pre">US$</span><input id="rent" name="rent" data-field="rent" autocomplete="off" value="${esc(form.rent)}" inputmode="decimal"><span class="post">≈ ${cad(RENT * CAD)}</span></div><p class="help">Stroop holds rent in digital US dollars so it can cross borders.</p></div>
+        <div class="field"><label for="rent">Rent each month</label><div class="input num"><span class="pre">US$</span><input id="rent" name="rent" data-field="rent" autocomplete="off" value="${esc(form.rent)}" inputmode="decimal"><span class="post">≈ ${cad(RENT * CAD)}</span></div><p class="help">Stroop holds rent in US dollars so it can move between countries.</p></div>
         <div class="field"><span class="label">How many months</span><div class="stepper num"><button data-act="months" data-arg="-1" aria-label="Fewer months">−</button><output aria-live="polite">${n} months</output><button data-act="months" data-arg="1" aria-label="More months">+</button></div></div>
         <div class="field"><label for="f-movein">Move in by</label><div class="input">${icon('calendar')}<input id="f-movein" name="moveIn" data-field="moveIn" autocomplete="off" value="${esc(form.moveIn)}"></div><p class="help">No keys by this date? Everything comes back to you.</p></div>
         <div class="field"><span class="label">If you disagree</span><div class="mediator card" style="padding:12px 14px"><span><b style="font-weight:650">${mediatorName()}</b><span class="help" style="display:block">Decides how to split what’s still locked. Nothing else.</span></span><button class="link" data-act="fam-sheet" data-arg="mediator">Change</button></div></div>
@@ -647,8 +657,8 @@ const FAM = {
   review() {
     const code = S.fam.cur, q = quote(code, months()), f = S.fam
     const whatIf = {
-      fake: `No keys by Jan 10? <b>All ${usd(q.lockUsd)} comes back</b>, Stroop’s fee included.`,
-      leave: `Leave after 6 months, with ${P.landlord}’s OK? <b>${usd(RENT * (months() - 6))} of unpaid rent comes back.</b>`,
+      fake: `No keys by Jan 10? <b>All ${usd(q.lockUsd)} comes back</b>, Stroop’s fee included.${q.fx ? ` Only the currency exchange fees are lost: about ${local(q.fx + toHome(q.lockUsd).fee, code)} there and back.` : ''}`,
+      leave: `Leave after 6 months, with ${P.landlord}’s OK? <b>${usd(RENT * Math.max(0, months() - 6))} of unpaid rent comes back</b>${q.fx ? `, about ${local(toHome(RENT * Math.max(0, months() - 6)).net, code)} in your bank` : ''}.`,
       problem: `Payments pause. The mediator splits <b>only what’s still locked</b> between you and ${P.landlord}.`,
     }
     const pct = Math.floor(q.rentPct)
@@ -656,7 +666,7 @@ const FAM = {
     return {
       head: header({ back: 'fam-back', title: 'Where your money goes' }),
       body: `<div class="scroll">
-        <p class="small">Step 2 of 2</p>
+        <p class="small">${f.sawSetup ? 'Step 2 of 2 · ' : ''}${months()} months × ${usd(RENT)} for ${P.landlordFull} · <button class="link" data-act="fam-go" data-arg="setup">Edit</button></p>
         <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:14px;gap:8px">
           <div><p class="eyebrow">Leaves your bank</p><p class="big num" style="margin-top:4px">${local(q.total, code)}</p></div>
           <button class="chip-btn" data-act="fam-sheet" data-arg="currency" aria-label="Currency: ${code}. Change">${code} ${icon('down')}</button>
@@ -664,10 +674,10 @@ const FAM = {
         <p class="lede" style="margin-top:10px"><b style="color:var(--ink)">${sym}${pct} of every ${sym}100 becomes rent.</b> Here’s the rest.</p>
         <div class="bar" style="margin-top:16px" aria-hidden="true"><span class="k-rent" style="flex-grow:${q.rentPct}"></span><span class="k-fee" style="flex-grow:${q.feePct}"></span>${q.fx ? `<span class="k-fx" style="flex-grow:${q.fxPct}"></span>` : ''}</div>
         <div class="ledger num">
-          <div class="r"><span class="key k-rent"></span><span class="lbl">Rent for ${P.landlord}<span class="sub">${months()} × ${usd(RENT)}, locked, paid monthly</span></span><span class="amt">${local(q.rent, code)}<span class="sub">${usd(q.rentUsd)}</span></span></div>
+          <div class="r"><span class="key k-rent"></span><span class="lbl">Rent for ${P.landlord}, your landlord<span class="sub">${months()} × ${usd(RENT)}, locked, paid monthly</span></span><span class="amt">${local(q.rent, code)}<span class="sub">${usd(q.rentUsd)}</span></span></div>
           <div class="r"><span class="key k-fee"></span><span class="lbl">Stroop’s fee, 1%<span class="sub">Taken when you move in. Refunded if you don’t.</span></span><span class="amt">${local(q.fee, code)}<span class="sub">${usd(q.feeUsd)}</span></span></div>
-          ${q.fx ? `<div class="r"><span class="key k-fx"></span><span class="lbl">Exchange fee, est. 1%<span class="sub">Kept by the exchange partner that turns ${CUR[code].name} into US$. Not Stroop.</span></span><span class="amt">${local(q.fx, code)}</span></div>` : ''}
-          <div class="r"><span class="key" style="box-shadow:inset 0 0 0 1.5px var(--line-2)"></span><span class="lbl">Stellar network fee<span class="sub">About ${usd(NETWORK_USD, true)}. Stroop pays it.</span></span><span class="amt">${local(0, code)}</span></div>
+          ${q.fx ? `<div class="r"><span class="key k-fx"></span><span class="lbl">Currency exchange, est. 1%<span class="sub">Kept by the licensed company that changes ${CUR[code].name} into US$. Not Stroop.</span></span><span class="amt">${local(q.fx, code)}</span></div>` : ''}
+          <div class="r"><span class="key" style="box-shadow:inset 0 0 0 1.5px var(--line-2)"></span><span class="lbl">Network fee<span class="sub">About ${usd(NETWORK_USD, true)} to record it on Stellar. Stroop pays it.</span></span><span class="amt">${local(0, code)}</span></div>
         </div>
         ${q.fx ? `<p class="help" style="margin-top:4px">Rate: ${rate(code)} per US$1, fixed when you pay.</p>` : ''}
         <div class="sec card">
@@ -686,7 +696,7 @@ const FAM = {
           <p class="whatif-out" aria-live="polite">${whatIf[f.whatIf]}</p>
         </div>
       </div>`,
-      foot: btn(`Pay ${local(q.total, code)}`, 'fam-pay', 'primary', 'lock'),
+      foot: btn(`Pay ${local(q.total, code)}`, 'fam-sheet', 'primary', 'lock', 'pay'),
     }
   },
   paying() {
@@ -694,7 +704,7 @@ const FAM = {
     const steps = [
       [`${local(q.total, code)} left your bank`, 'From your bank account'],
       [`Exchanged to ${usd(q.lockUsd)}`, q.fx ? `Exchange fee ${local(q.fx, code)}` : 'No exchange needed'],
-      [`Locked for ${P.landlordFull}`, 'In the Stroop contract on Stellar'],
+      [`Locked for ${P.landlordFull}`, 'Held on Stellar under the lease rules'],
     ]
     return {
       head: header({ title: 'Locking your rent' }),
@@ -725,17 +735,17 @@ const FAM = {
     let status = '', actions = '', more = ''
     if (l.status === 'funded') {
       status = `<div class="status"><span class="badge wait">${icon('calendar')}Waiting for ${P.landlord}</span><p class="h2" style="margin-top:10px">${P.landlord} has your proof link.</p><p class="small">Once ${P.landlord} accepts, the lease is set. Until then you can cancel for a full refund.</p></div>`
-      more = `<button class="list-btn" data-act="fam-sheet" data-arg="cancel"><span>Cancel and get ${usd(q.lockUsd)} back</span>${icon('right')}</button>`
+      more = `<button class="list-btn" data-act="fam-sheet" data-arg="cancel"><span>Cancel and get ${usd(q.lockUsd)} back${homeNote(q.lockUsd)}</span>${icon('right')}</button>`
     } else if (l.status === 'accepted' && l.deadlinePassed && !l.handedOver) {
       status = `<div class="status danger"><span class="badge stop">${icon('alert')}No keys by Jan 10</span><p class="h2" style="margin-top:10px">Take your rent back.</p><p class="small">${P.landlord} never handed over the keys, so all ${usd(q.lockUsd)} is yours again, Stroop’s fee included.</p></div>`
       actions = btn(`Take back ${usd(q.lockUsd)}`, 'fam-sheet', 'primary', 'undo', 'reclaim')
     } else if (l.status === 'accepted' && l.handedOver) {
-      status = `<div class="status syrup"><span class="badge wait">${icon('key')}Keys handed over</span><p class="h2" style="margin-top:10px">${P.landlord} says you have the keys.</p><p class="small">Confirm to start the lease, or report a problem within 3 days.</p></div>`
-      actions = btn('Confirm move-in', 'fam-sheet', 'primary', 'key', 'movein')
-      more = `<button class="list-btn" data-act="fam-sheet" data-arg="dispute"><span>I didn’t get the keys</span>${icon('right')}</button>`
+      status = `<div class="status syrup"><span class="badge wait">${icon('key')}Keys handed over</span><p class="h2" style="margin-top:10px">${P.landlord} says ${P.student} has the keys.</p><p class="small">If ${P.student} is in, confirm to start the lease. Not true? Report it within 3 days and nothing is paid.</p></div>`
+      actions = btn(`${P.student} has moved in`, 'fam-sheet', 'primary', 'key', 'movein')
+      more = `<button class="list-btn" data-act="fam-sheet" data-arg="dispute"><span>${P.student} didn’t get the keys</span>${icon('right')}</button>`
     } else if (l.status === 'accepted') {
-      status = `<div class="status"><span class="badge ok">${icon('check')}${P.landlord} accepted</span><p class="h2" style="margin-top:10px">Got the keys?</p><p class="small">Confirm once you’re in. That pays January and Stroop’s fee. No keys by Jan 10? It all comes back.</p></div>`
-      actions = btn('I’ve got the keys', 'fam-sheet', 'primary', 'key', 'movein')
+      status = `<div class="status"><span class="badge ok">${icon('check')}${P.landlord} accepted</span><p class="h2" style="margin-top:10px">Has ${P.student} got the keys?</p><p class="small">Confirm once ${P.student} has moved in. That pays January to ${P.landlord}, and Stroop’s fee. No keys by Jan 10? Your rent and Stroop’s fee come back.</p></div>`
+      actions = btn(`${P.student} has moved in`, 'fam-sheet', 'primary', 'key', 'movein')
     } else if (l.status === 'active' && l.endBy === 'll') {
       status = `<div class="status syrup"><span class="badge wait">${icon('door')}Request from ${P.landlord}</span><p class="h2" style="margin-top:10px">End the lease after ${monFull(l.paid - 1)}?</p><p class="small">${usd(w.locked)} of unpaid rent would come back to you.</p></div>`
       actions = `<div class="row-btns">${btn('Decline', 'end-decline', 'secondary', '', 'fam')}${btn('Agree', 'end-agree', 'primary')}</div>`
@@ -743,7 +753,7 @@ const FAM = {
       status = `<div class="status"><span class="badge wait">${icon('door')}Waiting for ${P.landlord}</span><p class="h2" style="margin-top:10px">You asked to end after ${monFull(l.paid - 1)}.</p><p class="small">If ${P.landlord} agrees, ${usd(w.locked)} comes back to you. The request lapses in 1 month.</p></div>`
       more = `<button class="list-btn" data-act="end-withdraw"><span>Withdraw request</span>${icon('right')}</button>`
     } else if (l.status === 'active') {
-      status = `<div class="status"><span class="badge ok">${icon('check')}Month ${l.paid} of ${months()} paid</span><p class="h2 num" style="margin-top:10px">Next: ${usd(RENT)} to ${P.landlord} on ${nextMon()} 1.</p><p class="small">Paid automatically. Nothing for you to do.</p></div>`
+      status = `<div class="status"><span class="badge ok">${icon('check')}Month ${l.paid} of ${months()} paid</span><p class="h2 num" style="margin-top:10px">Next: ${usd(RENT)} to ${P.landlord} on ${nextMon()} 1.</p><p class="small">${l.declinedBy === 'll' ? `${P.landlord} said no to ending early, so the lease continues. Paid automatically.` : 'Paid automatically. Nothing for you to do.'}</p></div>`
       more = `<button class="list-btn" data-act="fam-sheet" data-arg="end"><span>End the lease early</span>${icon('right')}</button><button class="list-btn" data-act="fam-sheet" data-arg="dispute"><span>Report a problem</span>${icon('right')}</button>`
     } else if (l.status === 'disputed') {
       status = `<div class="status danger"><span class="badge stop">${icon('pause')}Payments paused</span><p class="h2" style="margin-top:10px">The mediator is looking at it.</p><p class="small">Stroop Resolution Desk can only split what’s still locked (${usd(w.locked)}) between you and ${P.landlord}.</p></div>`
@@ -756,9 +766,9 @@ const FAM = {
       if (!l.sentHome) actions = btn('Send to my bank', 'fam-sendhome', 'primary', 'bank')
     }
     const feeRows = `<div class="ledger num">
-      <div class="r"><span class="key k-fx"></span><span class="lbl">Exchange partner</span><span class="amt">${q.fx ? local(q.fx, S.fam.cur) : '–'}</span></div>
+      <div class="r"><span class="key k-fx"></span><span class="lbl">Currency exchange<span class="sub">When you paid</span></span><span class="amt">${q.fx ? local(q.fx, S.fam.cur) : '–'}</span></div>
       <div class="r"><span class="key k-fee"></span><span class="lbl">Stroop<span class="sub">${l.feeTaken ? 'Taken at move-in' : w.back ? 'Refunded to you' : 'Held until you move in'}</span></span><span class="amt">${l.feeTaken ? usd(q.feeUsd) : usd(0)}</span></div>
-      <div class="r"><span class="key" style="box-shadow:inset 0 0 0 1.5px var(--line-2)"></span><span class="lbl">Stellar network<span class="sub">Paid by Stroop</span></span><span class="amt">${usd(0)}</span></div>
+      <div class="r"><span class="key" style="box-shadow:inset 0 0 0 1.5px var(--line-2)"></span><span class="lbl">Network fees<span class="sub">Paid by Stroop</span></span><span class="amt">${usd(0)}</span></div>
     </div>`
     return {
       head: header({ right: `<span class="who">Sharma family</span>` }),
@@ -777,10 +787,24 @@ const FAM = {
 }
 
 const FAM_SHEETS = {
+  pay: () => {
+    const code = S.fam.cur, q = quote(code, months())
+    return {
+      label: 'Confirm payment',
+      html: `<p class="h2">Confirm with your bank</p><p class="small">Your bank asks you to approve this payment. The rate is fixed for 10 minutes.</p>
+        <div class="what-happens facts num" style="margin-top:14px;padding:0 14px">
+          <div class="r" style="border-top:0"><span>From</span><span>Your bank account ••4410</span></div>
+          <div class="r"><span>To</span><span>Currency exchange for Stroop</span></div>
+          <div class="r"><span>Amount</span><span>${local(q.total, code)}</span></div>
+          <div class="r"><span>Locked for ${P.landlord}</span><span>${usd(q.lockUsd)}</span></div>
+        </div>
+        <div class="actions">${btn(`Approve ${local(q.total, code)}`, 'fam-pay', 'primary', 'lock')}${btn('Not now', 'close-sheet', 'quiet', '', 'fam')}</div>`,
+    }
+  },
   mediator: () => ({
     label: 'Who settles disagreements',
     html: `<p class="h2">Who settles disagreements?</p><p class="small">Only if one of you reports a problem. They can split what’s still locked between you and your landlord. They can’t keep any of it. Your landlord sees this before accepting.</p><div style="margin-top:12px">${[
-      ['desk', 'Stroop Resolution Desk', 'The default'],
+      ['desk', 'Stroop Resolution Desk', 'Stroop’s own mediation team. The default.'],
       ['own', 'Someone you both trust', 'A settlement agency, school housing office or lawyer'],
     ]
       .map(([k, t, sub]) => `<button class="list-btn" data-act="set-mediator" data-arg="${k}"><span>${t}<span class="small">${sub}</span></span>${S.fam.mediator === k ? icon('check', 'Selected') : ''}</button>`)
@@ -794,7 +818,7 @@ const FAM_SHEETS = {
   }),
   movein: () => ({
     label: 'Confirm move-in',
-    html: `<p class="h2">You’re in. Confirm move-in?</p><p class="small">This starts the lease. You can’t take the rent back after this, but you can still end early or report a problem.</p>
+    html: `<p class="h2">Has ${P.student} moved in?</p><p class="small">Confirm only once ${P.student} has the keys. This starts the lease: you can’t take the rent back after this, but you can still end early (if ${P.landlord} agrees) or report a problem.</p>
       <div class="what-happens ledger num">
         <div class="r"><span class="key k-paid"></span><span class="lbl">January rent to ${P.landlord}<span class="sub">Paid right now</span></span><span class="amt">${usd(RENT)}</span></div>
         <div class="r"><span class="key k-fee"></span><span class="lbl">Stroop’s fee, 1%<span class="sub">The only thing Stroop earns</span></span><span class="amt">${usd(RENT * months() * FEE)}</span></div>
@@ -804,12 +828,12 @@ const FAM_SHEETS = {
   }),
   reclaim: () => ({
     label: 'Take your rent back',
-    html: `<p class="h2 num">Take back ${usd(RENT * months() * (1 + FEE))}?</p><p class="small">The move-in deadline passed with no keys. The contract returns everything, Stroop’s fee included.</p>
+    html: `<p class="h2 num">Take back ${usd(RENT * months() * (1 + FEE))}?</p><p class="small">The move-in deadline passed with no keys, so your rent and Stroop’s fee come back.${S.fam.cur !== 'USD' ? ` Sent on to your bank, that’s about ${local(toHome(RENT * months() * (1 + FEE)).net, S.fam.cur)} after the exchange fee.` : ''}</p>
       <div class="actions">${btn('Take it all back', 'fam-reclaim', 'primary', 'undo')}${btn('Not now', 'close-sheet', 'quiet', '', 'fam')}</div>`,
   }),
   cancel: () => ({
     label: 'Cancel lease',
-    html: `<p class="h2 num">Cancel and get ${usd(RENT * months() * (1 + FEE))} back?</p><p class="small">${P.landlord} hasn’t accepted yet, so you get everything back, fee included. The proof link stops working.</p>
+    html: `<p class="h2 num">Cancel and get ${usd(RENT * months() * (1 + FEE))} back?</p><p class="small">${P.landlord} hasn’t accepted yet, so your rent and Stroop’s fee come back to your Stroop account.${S.fam.cur !== 'USD' ? ` Sent on to your bank, that’s about ${local(toHome(RENT * months() * (1 + FEE)).net, S.fam.cur)} after the exchange fee.` : ''} The proof link stops working.</p>
       <div class="actions">${btn('Cancel lease', 'fam-reclaim', 'danger')}${btn('Keep it', 'close-sheet', 'quiet', '', 'fam')}</div>`,
   }),
   end: () => endSheet('fam'),
@@ -872,15 +896,13 @@ const LL = {
         <p class="eyebrow">Proof of rent · ${P.studentFull}</p>
         <p class="big num" style="margin-top:6px">${usd(RENT * n)}</p>
         <p class="lede" style="margin-top:4px">is locked for your lease at ${P.address}.</p>
-        <p class="small" style="margin-top:8px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--back);margin-right:6px"></span>Live from Stellar · <a class="link" href="${RECORD}" target="_blank" rel="noreferrer">View record${icon('ext')}</a></p>
+        <p class="small" style="margin-top:8px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--back);margin-right:6px"></span>Checked just now · <a class="link" href="${RECORD}" target="_blank" rel="noreferrer">View record${icon('ext')}</a></p>
         <div class="facts num">
-          <div class="r"><span>Each month</span><span>${usd(RENT)} on the 1st</span></div>
+          <div class="r"><span>Each month</span><span>${usd(RENT)} on the 1st<span class="sub">≈ ${cad(out.net)} in your bank, after a 0.5% cash-out fee (${cad(out.fee)})</span></span></div>
           <div class="r"><span>Lease</span><span>Jan 2027–${mon(n - 1)} ${2027 + Math.floor((n - 1) / 12)} · ${n} months</span></div>
-          <div class="r"><span>In your bank</span><span>≈ ${cad(out.net)} a month</span></div>
-          <div class="r"><span>Cost to you</span><span>Free</span></div>
-          <div class="r"><span>Disagreements</span><span>${mediatorName()}</span></div>
+          <div class="r"><span>Stroop’s fee</span><span>None for landlords</span></div>
+          <div class="r"><span>Disagreements</span><span>${mediatorName()}${S.fam.mediator === 'own' ? '' : '<span class="sub">Stroop’s mediation team</span>'}</span></div>
         </div>
-        <div class="sec">${monthTiles('ll')}</div>
         <div class="sec card"><div class="rules">
           <div class="rule">${icon('key')}<span>Once you hand over the keys, <b>the family can’t take the rent back.</b></span></div>
           <div class="rule">${icon('lock')}<span>Each month unlocks on its date. <b>Nobody can release one early</b>, including Stroop.</span></div>
@@ -897,7 +919,7 @@ const LL = {
     } else if (l.status === 'accepted' && l.handedOver) {
       status = `<div class="status syrup"><span class="badge wait">${icon('key')}Keys handed over</span><p class="h2" style="margin-top:10px">Waiting for Priya to confirm.</p><p class="small">If Priya says nothing for 3 days, the lease starts and January is paid to you.</p></div>`
     } else if (l.status === 'accepted') {
-      status = `<div class="status"><span class="badge ok">${icon('check')}Accepted</span><p class="h2" style="margin-top:10px">Hand over the keys on move-in day.</p><p class="small">January is paid when Priya confirms or you mark the keys handed over.</p></div>`
+      status = `<div class="status"><span class="badge ok">${icon('check')}Accepted</span><p class="h2" style="margin-top:10px">Hand over the keys on move-in day.</p><p class="small">January is paid when Priya confirms move-in. Or mark the keys handed over: if Priya doesn’t object within 3 days, the lease starts.</p></div>`
       actions = btn('I’ve handed over the keys', 'll-sheet', 'primary', 'key', 'keys')
     } else if (l.status === 'active' && l.endBy === 'fam') {
       status = `<div class="status syrup"><span class="badge wait">${icon('door')}Request from the family</span><p class="h2" style="margin-top:10px">End the lease after ${monFull(l.paid - 1)}?</p><p class="small">You keep the ${usd(w.paid)} paid so far. ${usd(w.locked)} goes back to the family.</p></div>`
@@ -907,7 +929,7 @@ const LL = {
       more = `<button class="list-btn" data-act="end-withdraw"><span>Withdraw request</span>${icon('right')}</button>`
     } else if (l.status === 'active') {
       status = `<div class="status"><span class="badge ok">${icon('check')}Paid on time</span><p class="h2 num" style="margin-top:10px">Next: ${usd(RENT)} on ${nextMon()} 1.</p><p class="small">Sent to you automatically.</p></div>`
-      more = `<button class="list-btn" data-act="ll-early"><span>Collect ${monFull(l.paid)} now<span class="small">Try it: the contract won’t allow it.</span></span>${icon('lock')}</button><button class="list-btn" data-act="ll-sheet" data-arg="end"><span>End the lease early</span>${icon('right')}</button><button class="list-btn" data-act="ll-sheet" data-arg="dispute"><span>Report a problem</span>${icon('right')}</button>`
+      more = `<button class="list-btn" data-act="ll-early"><span>Collect ${monFull(l.paid)} now<span class="small">Unlocks ${nextMon()} 1</span></span>${icon('lock')}</button><button class="list-btn" data-act="ll-sheet" data-arg="end"><span>End the lease early</span>${icon('right')}</button><button class="list-btn" data-act="ll-sheet" data-arg="dispute"><span>Report a problem</span>${icon('right')}</button>`
     } else if (l.status === 'disputed') {
       status = `<div class="status danger"><span class="badge stop">${icon('pause')}Payments paused</span><p class="h2" style="margin-top:10px">The mediator is looking at it.</p><p class="small">Rent already paid to you stays yours.</p></div>`
       if (l.disputeBy === 'll') more = `<button class="list-btn" data-act="dispute-withdraw"><span>Withdraw report and resume</span>${icon('right')}</button>`
@@ -923,6 +945,9 @@ const LL = {
       : S.ll.outTotal
         ? `<div class="sec small num" style="display:flex;gap:8px;align-items:center">${icon('bank')}${cad(S.ll.outTotal)} sent to your bank so far.</div>`
         : ''
+    const auto = ['active', 'disputed'].includes(l.status)
+      ? `<div class="sec"><button class="list-btn" role="switch" aria-checked="${S.ll.auto}" data-act="ll-auto"><span>Send rent to my bank automatically<span class="small">${S.ll.auto ? `Each rent day, to ${P.bank}` : 'Or cash out yourself, any time'}</span></span><span class="switch" aria-hidden="true"></span></button></div>`
+      : ''
     return {
       head: header({ right: `<span class="who">Sam Tremblay</span>` }),
       body: `<div class="scroll">
@@ -930,6 +955,7 @@ const LL = {
         <div style="margin-top:12px">${status}</div>
         ${actions ? `<div style="margin-top:12px">${actions}</div>` : ''}
         ${balance}
+        ${auto}
         <div class="sec"><div class="sec-title"><span>Your rent</span></div>${moneyNow('ll')}</div>
         <div class="sec"><div class="sec-title"><span>${leaseYears()}</span><span class="num">${l.paid} of ${months()} paid</span></div>${monthTiles('ll')}</div>
         ${more ? `<div class="sec">${more}</div>` : ''}
@@ -948,7 +974,7 @@ const LL = {
         <div class="sec ledger num">
           <div class="r"><span class="key k-paid"></span><span class="lbl">Your rent</span><span class="amt">${usd(u, true)}</span></div>
           <div class="r"><span class="key" style="box-shadow:inset 0 0 0 1.5px var(--line-2)"></span><span class="lbl">In Canadian dollars<span class="sub">At C$${CAD.toFixed(2)} per US$1</span></span><span class="amt">${cad(o.gross, true)}</span></div>
-          <div class="r"><span class="key k-out"></span><span class="lbl">Cash-out fee, est. 0.5%<span class="sub">Kept by the licensed cash-out partner</span></span><span class="amt">−${cad(o.fee, true)}</span></div>
+          <div class="r"><span class="key k-out"></span><span class="lbl">Cash-out fee, est. 0.5%<span class="sub">Kept by the licensed Canadian company that pays your bank</span></span><span class="amt">−${cad(o.fee, true)}</span></div>
           <div class="r"><span class="key k-fee"></span><span class="lbl">Stroop’s fee<span class="sub">Free for landlords</span></span><span class="amt">${cad(0, true)}</span></div>
           <div class="r total"><span></span><span class="lbl">You get</span><span class="amt">${cad(o.net, true)}</span></div>
         </div>
@@ -958,7 +984,7 @@ const LL = {
   },
   cashed() {
     return {
-      body: `<div class="scroll" style="padding-top:20px"><div class="success-mark green">${icon('check')}</div><h1 class="h1 num">${cad(S.ll.cashing, true)} is on its way.</h1><p class="lede">To ${P.bank}, through the cash-out partner.</p></div>`,
+      body: `<div class="scroll" style="padding-top:20px"><div class="success-mark green">${icon('check')}</div><h1 class="h1 num">${cad(S.ll.cashing, true)} is on its way.</h1><p class="lede">To ${P.bank}. Usually arrives in 1–2 business days (est.).</p></div>`,
       foot: btn('Done', 'll-go', 'primary', '', 'home'),
     }
   },
@@ -969,6 +995,7 @@ const LL_SHEETS = {
     label: 'Create your landlord account',
     html: `<p class="h2">Accept with a free account</p><p class="small">So rent has somewhere to go. No password: your phone’s face or fingerprint unlock signs you in.</p>
       <div class="field"><label for="ll-name">Name</label><div class="input"><input id="ll-name" name="name" autocomplete="name" value="${esc(P.landlordFull)}"></div></div>
+      <div class="field"><label for="ll-bank">Bank account for rent</label><div class="input">${icon('bank')}<input id="ll-bank" name="bank" autocomplete="off" value="${P.bank}"></div><p class="help">Example account. Cash-outs go here.</p></div>
       <div class="field"><label for="ll-mail">Email</label><div class="input"><input id="ll-mail" name="email" type="email" autocomplete="email" spellcheck="false" value="sam@example.com"></div></div>
       <div class="actions">${S.ll.signing ? `<button class="btn btn-primary" disabled>Signing in…</button>` : btn('Accept with Face ID', 'll-accept', 'primary', 'face')}</div>
       <p class="help" style="margin-top:10px">By accepting, you agree to the lease terms on the proof page and to the Stroop Resolution Desk for disagreements.</p>`,
@@ -980,8 +1007,8 @@ const LL_SHEETS = {
   }),
   blocked: () => ({
     label: 'Not due yet',
-    html: `<div class="lock-big shake">${icon('lock')}</div><p class="h2">${monFull(L().paid)} isn’t due yet.</p><p class="small">It unlocks on ${nextMon()} 1. Nobody can release a month early: not you, not the family, not Stroop.</p>
-      <p class="small" style="margin-top:12px;display:flex;gap:6px;align-items:center">${icon('shield')}<span>The contract refused this request. <a class="link" href="${RECORD}" target="_blank" rel="noreferrer">See it${icon('ext')}</a></span></p>
+    html: `<div class="lock-big shake">${icon('lock')}</div><p class="h2">${monFull(L().paid)} isn’t due yet.</p><p class="small">It unlocks on ${nextMon()} 1. The lease rules don’t allow early payouts, and nobody can override them: not you, not the family, not Stroop.</p>
+      <p class="small" style="margin-top:12px;display:flex;gap:6px;align-items:center">${icon('shield')}<span>Refused by the lease rules. <a class="link" href="${RECORD}" target="_blank" rel="noreferrer">See it${icon('ext')}</a></span></p>
       <div class="actions">${btn('Got it', 'close-sheet', 'primary', '', 'll')}</div>`,
   }),
   end: () => endSheet('ll'),
@@ -1002,10 +1029,10 @@ function renderVault() {
   const paidNew = anim === 'month' || anim === 'movein' ? 1 : 0
   const headline = draft ? `<p class="big num">${usd(0)}</p><p class="small">locked yet. It’s all still in the family’s bank.</p>` : `<p class="big num">${usd(w.locked + w.feeHeld)}</p><p class="small">locked in Stroop</p>`
   const fees = draft ? '' : `<div class="fees num"><div class="sec-title"><span>Fees so far, by who keeps them</span></div>
-    ${q.fx ? `<div class="r"><span>Exchange partner</span><span>${local(q.fx, S.fam.cur)}</span></div>` : ''}
+    ${q.fx ? `<div class="r"><span>Currency exchange</span><span>${local(q.fx, S.fam.cur)}</span></div>` : ''}
     <div class="r"><span>Stroop</span><span>${l.feeTaken ? usd(q.feeUsd) : w.feeHeld ? `${usd(0)} <span class="small">(${usd(q.feeUsd)} held)</span>` : usd(0)}</span></div>
     ${S.ll.outTotal ? `<div class="r"><span>Cash-out partner</span><span>${cad(S.ll.outTotal / (1 - FX_OUT) * FX_OUT, true)}</span></div>` : ''}
-    <div class="r"><span>Stellar network</span><span>&lt;${usd(0.01, true)} · Stroop pays</span></div></div>`
+    <div class="r"><span>Network fees</span><span>≈ ${usd(NETWORK_USD, true)} · Stroop pays</span></div></div>`
 
   let demo = ''
   const actor = nextActor()
@@ -1098,7 +1125,7 @@ const A = {
   noop() {},
   copy() { notify('fam', { title: 'Link copied', body: P.link, icon: 'copy' }) },
   'set-mediator'(k) { S.fam.mediator = k; S.fam.sheet = null },
-  'fam-go'(s) { S.fam.screen = s },
+  'fam-go'(s) { S.fam.screen = s; if (s === 'setup') S.fam.sawSetup = true },
   'fam-back'() { S.fam.screen = { setup: 'welcome', review: 'setup' }[S.fam.screen] || 'welcome' },
   months(d) { S.fam.months = Math.min(24, Math.max(1, S.fam.months + Number(d))) },
   whatif(k) { S.fam.whatIf = k },
@@ -1107,6 +1134,7 @@ const A = {
   'close-sheet'(side) { S[side].sheet = null },
   'set-cur'(code) { S.fam.cur = code; S.fam.sheet = null },
   async 'fam-pay'() {
+    S.fam.sheet = null
     S.fam.screen = 'paying'; S.fam.payStep = 0; render()
     for (let i = 1; i <= 3; i++) { await wait(750); S.fam.payStep = i; render() }
     await wait(350)
@@ -1155,11 +1183,18 @@ const A = {
   'll-early'() { S.ll.sheet = 'blocked'; log('ll', `Early payout of ${monFull(L().paid)} refused by the contract`, '', 'event') },
   'clock-month'() {
     const l = L()
-    l.paid += 1; S.ll.balance += RENT
+    l.paid += 1
     S.fresh = 'month'
     log('ll', `${monFull(l.paid - 1)} rent paid to ${P.landlord}`, usd(RENT))
     if (l.paid >= months()) l.status = 'completed'
-    notify('ll', { title: `${usd(RENT)} received`, body: `${monFull(l.paid - 1)} rent, on time.`, icon: 'coins' })
+    if (S.ll.auto) {
+      const o = cashOut(RENT)
+      S.ll.outTotal += o.net
+      notify('ll', { title: `${cad(o.net)} on its way to your bank`, body: `${monFull(l.paid - 1)} rent, on time. Sent automatically.`, icon: 'bank' })
+    } else {
+      S.ll.balance += RENT
+      notify('ll', { title: `${usd(RENT)} received`, body: `${monFull(l.paid - 1)} rent, on time.`, icon: 'coins' })
+    }
     notify('fam', { title: `${monFull(l.paid - 1)} rent paid`, body: `${l.paid} of ${months()} months done.` })
     setTimeout(() => fly('#vault .col.center', '#ll .scroll', usd(RENT), 'paid'), 30)
   },
@@ -1180,7 +1215,7 @@ const A = {
     notify('fam', { title: 'On its way to your bank', icon: 'bank' })
   },
   'end-propose'(side) {
-    L().endBy = side; S[side].sheet = null
+    L().endBy = side; L().declinedBy = null; S[side].sheet = null
     const other = side === 'fam' ? 'll' : 'fam'
     notify(other, { title: 'Request to end early', body: `After ${monFull(L().paid - 1)}. Open to agree or decline.`, icon: 'door' })
   },
@@ -1193,7 +1228,7 @@ const A = {
     notify('ll', { title: 'Lease ended', body: `You keep ${usd(w.paid)} paid so far.`, icon: 'door' })
     setTimeout(() => fly('#vault .col.center', '#fam .scroll', usd(l.back), 'back'), 30)
   },
-  'end-decline'(side) { L().endBy = null; notify(side === 'fam' ? 'll' : 'fam', { title: 'Request declined', body: 'The lease continues.', icon: 'x' }) },
+  'end-decline'(side) { L().endBy = null; L().declinedBy = side; notify(side === 'fam' ? 'll' : 'fam', { title: 'Request declined', body: 'The lease continues.', icon: 'x' }) },
   'end-withdraw'() { L().endBy = null },
   dispute(side) {
     const l = L(); l.status = 'disputed'; l.disputeBy = side; S[side].sheet = null
@@ -1201,6 +1236,7 @@ const A = {
     notify(side === 'fam' ? 'll' : 'fam', { title: 'Payments paused', body: 'A problem was reported. The mediator will reach out.', icon: 'pause' })
   },
   'dispute-withdraw'() { const l = L(); l.status = l.paid > 0 ? 'active' : 'accepted'; l.disputeBy = null; log('fam', 'Report withdrawn. Payments resumed', '', 'event') },
+  'll-auto'() { S.ll.auto = !S.ll.auto },
   'll-cashout'() {
     const o = cashOut(S.ll.balance)
     S.ll.cashing = o.net; S.ll.outTotal += o.net
