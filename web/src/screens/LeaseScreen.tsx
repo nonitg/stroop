@@ -221,7 +221,8 @@ function LeaseDetail({ lease, role, onChange }: { lease: Lease; role: Role; onCh
               slices={slices.filter((s) => s.value > 0)}
               total={{ label: family ? 'You put in' : 'Lease total', amount: fmtUSD(BigInt(Math.round(total * 1e7))) }}
             />
-            {lease.covered > 0n && (
+            {/* Blend rounds to the unit; only mention a gap someone could notice (a cent or more). */}
+            {lease.covered >= 100_000n && (
               <p className="callout good" style={{ marginTop: 12 }}>
                 <ShieldCheck size={17} aria-hidden />
                 <span>Lending came back {fmtUSD(lease.covered)} short. Stroop paid it, so the lease is whole.</span>

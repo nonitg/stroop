@@ -84,7 +84,7 @@ Two persona testers ran the flow, a parent in Pune and a landlord in Waterloo, a
 
 ## Assumptions to confirm
 
-1. **"How much Stroop gives back"** is shown as: the fee is refunded if there's no move-in, unused rent comes back, Stroop pays the network fee, and Stroop earns no interest. Yield-sharing is not shown, because it's cut (Stablecoin Act). If you meant a rebate or revenue share, that's a new feature to decide.
+1. **"How much Stroop gives back"** is shown as: the fee is refunded if there's no move-in, unused rent comes back, Stroop pays the network fee, and Stroop earns no interest unless the family opts into lending. Then Stroop keeps what lending earns and the family gets a flat US$50 off, never a rate or a share (Stablecoin Act). See `docs/LENDING.md`.
 2. **Stroop pays the network fee** (the roadmap's sponsored fees). Today's testnet demo has the wallet pay it.
 3. **Exchange 1% / cash-out 0.5% / ₹88.50 / C$1.40** are estimates, as in the current app. Pull live quotes before showing real users.
 4. **Rent is set in US$** (the contract holds USDC). A Canadian landlord thinks in C$, so a later version could quote the lease in C$ and show the US$ amount locked.

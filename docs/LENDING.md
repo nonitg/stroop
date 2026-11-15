@@ -1,6 +1,6 @@
 # Lending idle rent (opt-in)
 
-Status: built on testnet (branch `lending`). Not in the showcase pitch yet. Needs legal sign-off before real money.
+Status: built on testnet (branch `lending`) and tested against Blend's real testnet pool. A Q&A answer in the showcase, not part of the demo. Needs legal sign-off before real money.
 
 ## The deal, in one line
 
@@ -19,7 +19,14 @@ The family can let Stroop lend rent it won't need for months. Stroop keeps what 
 | Payer can switch off any time (`set_lending`); disputes, early ends and refunds recall everything first | The family stays in control |
 | Flat US$50 discount, 9+ month leases only | A flat amount that doesn't grow with amount or time, so it isn't interest. Shorter leases have too little to lend |
 
-Testnet uses `demo_vault` as a stand-in for Blend (it can simulate a loss). Mainnet needs an adapter that calls Blend's `pool.submit` (supply = request type 0, withdraw = 1).
+Two venues share one `deposit` / `withdraw` interface, so the rent contract doesn't change between them:
+
+- **`blend_adapter`**: supplies to one Blend v2 pool via `pool.submit` (supply = request type 0, withdraw = 1). Depositors are owed exactly their principal. Blend's interest is Stroop's to `harvest`. If bad debt lowers the pool's value, every lease takes the same pro-rata cut and the cover fund makes it up. Pool and token are fixed at deployment.
+- **`demo_vault`**: what the demo app uses. Same rules, plus `simulate_loss` so the demo can show the cover fund paying. The demo's test USDC isn't Blend's.
+
+`scripts/blend-testnet.sh` runs a lease against Blend's `TestnetV2` pool with Blend's testnet USDC. It borrows that USDC against friendbot XLM, since Blend has no faucet. Last run (2026-11-15): US$80 supplied at move-in, US$10 recalled when month 2 was paid, the remaining US$70 recalled when lending was switched off, nothing short, and Stroop earned 238 stroops of interest in about 2 minutes ([adapter](https://stellar.expert/explorer/testnet/contract/CB7O2VVCT4GIOSWOFOMYKF2SCY66GBKJXKXNTHJKLQEKLL2HG3GPBFVU), [reserve](https://stellar.expert/explorer/testnet/contract/CBIXF2AVRB7LT5BJKHE4FM445PWEH5E6NHMTSDCWXPZ2FZCDUQOIVJQL)).
+
+Blend rounds against suppliers by up to 1 unit (0.0000001 USDC). The cover fund pays that dust; the app only mentions a gap of a cent or more.
 
 ## What we show, and what we leave out
 
