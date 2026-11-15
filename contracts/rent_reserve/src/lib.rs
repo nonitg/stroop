@@ -95,8 +95,9 @@ pub struct Config {
     pub treasury: Address,
     /// Service fee in basis points of the reserve.
     pub fee_bps: u32,
-    /// Lower service fee for leases that opt into lending.
-    pub lend_fee_bps: u32,
+    /// Flat amount off the service fee for leases that opt into lending. Flat on
+    /// purpose: it never grows with the amount or time lent, so it isn't interest.
+    pub lend_discount: i128,
     /// The only place lent rent can go.
     pub vault: Address,
 }
@@ -131,7 +132,10 @@ enum DataKey {
 }
 
 /// Rent for the next this-many periods always stays in the contract, never lent.
+/// That includes the final months, so a last-month deposit is never lent.
 pub const CASH_PERIODS: u32 = 3;
+/// Shorter leases have too little to lend to be worth the discount.
+pub const MIN_LEND_PERIODS: u32 = 9;
 /// The cover fund must stay at least this share of all lent rent (10%), and lending
 /// beyond what it can back waits until more cover is added.
 pub const MIN_COVER_BPS: i128 = 1_000;
@@ -297,16 +301,16 @@ pub struct RentReserve;
 impl RentReserve {
     /// `token` is fixed for the contract's life so a lease can never be "funded"
     /// with a look-alike token.
-    pub fn __constructor(env: Env, token: Address, treasury: Address, fee_bps: u32, lend_fee_bps: u32, vault: Address) {
-        if fee_bps > MAX_FEE_BPS || lend_fee_bps > fee_bps {
+    pub fn __constructor(env: Env, token: Address, treasury: Address, fee_bps: u32, lend_discount: i128, vault: Address) {
+        if fee_bps > MAX_FEE_BPS || lend_discount < 0 {
             panic_with_error!(&env, Error::InvalidConfig);
         }
-        env.storage().instance().set(&DataKey::Config, &Config { token, treasury, fee_bps, lend_fee_bps, vault });
+        env.storage().instance().set(&DataKey::Config, &Config { token, treasury, fee_bps, lend_discount, vault });
         env.storage().instance().set(&DataKey::Count, &0u64);
     }
 
     /// Lock `rent * periods` (plus the service fee) from `payer` for a new lease.
-    /// `lend` opts into lending later months for the lower fee. Returns the lease id.
+    /// `lend` opts into lending later months for a flat fee discount. Returns the lease id.
     pub fn create(
         env: Env,
         payer: Address,
@@ -325,7 +329,8 @@ impl RentReserve {
             && (MIN_WINDOW_SECS..=MAX_WINDOW_SECS).contains(&move_in_window_secs)
             && payer != landlord
             && mediator != payer
-            && mediator != landlord;
+            && mediator != landlord
+            && (!lend || periods >= MIN_LEND_PERIODS);
         if !valid {
             panic_with_error!(&env, Error::InvalidTerms);
         }
@@ -333,11 +338,11 @@ impl RentReserve {
         let total = rent
             .checked_mul(periods as i128)
             .unwrap_or_else(|| panic_with_error!(&env, Error::InvalidTerms));
-        let fee_bps = if lend { cfg.lend_fee_bps } else { cfg.fee_bps };
         let fee = total
-            .checked_mul(fee_bps as i128)
+            .checked_mul(cfg.fee_bps as i128)
             .unwrap_or_else(|| panic_with_error!(&env, Error::InvalidTerms))
             / 10_000;
+        let fee = if lend { (fee - cfg.lend_discount).max(0) } else { fee };
 
         token::Client::new(&env, &cfg.token).transfer(
             &payer,

@@ -39,7 +39,7 @@ fn setup() -> Setup<'static> {
     usdc_admin.mint(&payer, &(TOTAL + FEE));
 
     let vault = env.register(demo_vault::DemoVault, (&sac.address(), &treasury));
-    let id = env.register(RentReserve, (&sac.address(), &treasury, &100u32, &50u32, &vault));
+    let id = env.register(RentReserve, (&sac.address(), &treasury, &100u32, &DISCOUNT, &vault));
     let client = RentReserveClient::new(&env, &id);
     Setup { env, client, usdc, usdc_admin, payer, landlord, mediator, treasury, vault }
 }
@@ -299,7 +299,8 @@ fn rejects_excessive_fee_config() {
 
 // --- Lending -------------------------------------------------------------
 
-const LEND_FEE: i128 = TOTAL / 200; // 0.5%
+const DISCOUNT: i128 = 50_0000000; // US$50 off
+const LEND_FEE: i128 = FEE - DISCOUNT;
 
 fn vault(s: &Setup) -> demo_vault::DemoVaultClient<'static> {
     demo_vault::DemoVaultClient::new(&s.env, &s.vault)
@@ -382,6 +383,15 @@ fn payer_can_switch_lending_off_and_end_early_refunds_lent_rent() {
     s.client.end_early(&id, &s.payer);
     assert_eq!(s.client.end_early(&id, &s.landlord), RENT * 11);
     assert_eq!(s.client.get_lease(&id).lent, 0);
+}
+
+#[test]
+fn short_leases_cannot_opt_into_lending() {
+    let s = setup();
+    assert_eq!(
+        s.client.try_create(&s.payer, &s.landlord, &s.mediator, &RENT, &8, &MONTH, &WINDOW, &true),
+        Err(Ok(err(Error::InvalidTerms)))
+    );
 }
 
 #[test]
