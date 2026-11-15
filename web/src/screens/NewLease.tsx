@@ -2,11 +2,12 @@ import { type ReactNode, useState } from 'react'
 import { StrKey } from '@stellar/stellar-sdk'
 import { ArrowLeft, Check, ChevronRight, LoaderCircle, LockKeyhole, Minus, Plus, Share, Sparkles, X } from 'lucide-react'
 import { useApp } from '../app'
-import { explainError, feeFor, fmtUSD, fromUnits, getKeypair, logTx, reserve, setupWallet, toUnits } from '../stellar'
+import { FEE_PCT, explainError, feeFor, fmtUSD, fromUnits, getKeypair, logTx, reserve, setupWallet, toUnits } from '../stellar'
 import { LOCK_FEE_XLM, ON_RAMP_FEE, XLM_USD, currency, fmtMoney, onRampQuote } from '../money'
 import { STROOP_DESK, mediatorName, mediatorProblem } from '../mediators'
 import { go, useHomeCurrency, verifyLink } from '../hooks'
 import { useToast } from '../components/useToast'
+import { hushNews } from '../news'
 import { Ledger, MoneyBar, type Slice } from '../ui/MoneyBar'
 import { Sheet } from '../ui/Sheet'
 import { CurrencySheet } from '../ui/CurrencySheet'
@@ -60,6 +61,7 @@ export function NewLease({ to }: { to?: string }) {
     try {
       const { result, hash } = await reserve.create(kp, landlord.trim(), mediator, rentNum, months)
       const id = Number(result)
+      hushNews(id)
       if (hash) logTx({ leaseId: id, label: 'Rent locked', hash, at: Date.now() })
       toast({
         title: 'Rent locked',
@@ -275,7 +277,13 @@ function quoteLease(rent: number, months: number, code: string) {
       who: `Locked, paid to your landlord monthly`,
       amount: local(usdRent * perUsd),
     },
-    { tone: 'fee', value: usdFee * perUsd, label: 'Stroop fee · 1%', who: 'Only if you move in', amount: local(usdFee * perUsd) },
+    {
+      tone: 'fee',
+      value: usdFee * perUsd,
+      label: `Stroop fee · ${FEE_PCT}`,
+      who: 'Only if you move in',
+      amount: local(usdFee * perUsd),
+    },
   ]
   if (q.fee > 0)
     slices.push({

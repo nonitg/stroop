@@ -4,9 +4,12 @@ import { AppContext } from './app'
 import { type Route, useLeases, useRole, useRoute, useWallet } from './hooks'
 import type { Role } from './stellar'
 import { ToastProvider } from './components/ToastProvider'
+import { useToast } from './components/useToast'
+import { useLeaseNews } from './news'
 import { Nav } from './ui/Nav'
 import { AccountScreen } from './screens/AccountScreen'
 import { Activity } from './screens/Activity'
+import { Help } from './screens/Help'
 import { FamilyHome, LandlordHome } from './screens/Home'
 import { LeaseScreen } from './screens/LeaseScreen'
 import { NewLease } from './screens/NewLease'
@@ -24,7 +27,7 @@ export default function App() {
 
   return (
     <ToastProvider view={route.view}>
-      <div className="aurora" aria-hidden>
+      <div className="aurora" aria-hidden data-role={route.view === 'proof' ? undefined : (role ?? undefined)}>
         <i />
         <i />
         <i />
@@ -47,6 +50,9 @@ export default function App() {
 function SignedIn({ role, setRole, route }: { role: Role; setRole: (r: Role | null) => void; route: Route }) {
   const wallet = useWallet(role)
   const { leases, reload } = useLeases(wallet.kp?.publicKey())
+  const toast = useToast()
+  useLeaseNews(leases, role, wallet.kp?.publicKey() ?? '', toast)
+  const refresh = () => Promise.all([reload(), wallet.refresh()])
   if (!wallet.checked)
     return (
       <div className="splash">
@@ -59,16 +65,16 @@ function SignedIn({ role, setRole, route }: { role: Role; setRole: (r: Role | nu
         <Welcome role={role} wallet={wallet} onPick={setRole} />
       </div>
     )
-  const refresh = () => Promise.all([reload(), wallet.refresh()])
   // Full-screen tasks hide the tab bar on phones.
-  const tabs = route.view === 'home' || route.view === 'activity' || route.view === 'account'
+  const tabs = ['home', 'activity', 'help', 'account'].includes(route.view)
   return (
     <AppContext.Provider value={{ role, setRole, wallet, leases, refresh }}>
-      <div className="app">
+      <div className="app" data-role={role}>
         <Nav route={route} role={role} mobile={tabs} />
         {route.view === 'home' && (role === 'family' ? <FamilyHome /> : <LandlordHome />)}
         {route.view === 'activity' && <Activity />}
         {route.view === 'account' && <AccountScreen />}
+        {route.view === 'help' && <Help />}
         {route.view === 'new' && <NewLease to={route.to} />}
         {route.view === 'lease' && <LeaseScreen key={route.id} id={route.id} />}
       </div>

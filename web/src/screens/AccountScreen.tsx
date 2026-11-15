@@ -1,5 +1,17 @@
 import { useState } from 'react'
-import { ArrowLeftRight, ArrowUpRight, Check, ChevronRight, Copy, Globe, Landmark, Plus, RotateCcw, Share } from 'lucide-react'
+import {
+  ArrowLeftRight,
+  ArrowUpRight,
+  Check,
+  ChevronRight,
+  Copy,
+  Globe,
+  Landmark,
+  Plus,
+  RotateCcw,
+  Send,
+  Share,
+} from 'lucide-react'
 import { useApp } from '../app'
 import { explorer, resetDemo, short } from '../stellar'
 import { go, inviteLink, useHomeCurrency } from '../hooks'
@@ -16,7 +28,7 @@ export function AccountScreen() {
   const copy = useCopy()
   const share = useShare()
   const [code, setCode] = useHomeCurrency()
-  const [sheet, setSheet] = useState<'money' | 'currency' | 'reset' | null>(null)
+  const [sheet, setSheet] = useState<'money' | 'send' | 'currency' | 'reset' | null>(null)
   const [copied, setCopied] = useState(false)
   const kp = wallet.kp!
   const pub = kp.publicKey()
@@ -43,10 +55,20 @@ export function AccountScreen() {
         <span className="label">Balance</span>
         <Amount units={usdc} />
         {local.code !== 'USD' && <span className="approx">≈ {fmtMoney(usdc * local.perUsd, local.code)}</span>}
-        <button className="btn primary wide" onClick={() => setSheet('money')}>
-          {family ? <Plus size={18} aria-hidden /> : <Landmark size={18} aria-hidden />}
-          {family ? 'Add money' : 'Cash out'}
-        </button>
+        {family ? (
+          <div className="btn-pair">
+            <button className="btn primary" onClick={() => setSheet('money')}>
+              <Plus size={18} aria-hidden /> Add money
+            </button>
+            <button className="btn secondary" onClick={() => setSheet('send')} disabled={usdc <= 0}>
+              <Send size={18} aria-hidden /> Send to bank
+            </button>
+          </div>
+        ) : (
+          <button className="btn primary wide" onClick={() => setSheet('money')} disabled={usdc <= 0}>
+            <Landmark size={18} aria-hidden /> Cash out to your bank
+          </button>
+        )}
       </section>
 
       <ul className="list glass" style={{ marginTop: 14 }}>
@@ -131,9 +153,19 @@ export function AccountScreen() {
       <p className="fine">Stellar testnet · test money only · your keys stay in this browser</p>
 
       {family ? (
-        <AddMoneySheet open={sheet === 'money'} onClose={() => setSheet(null)} kp={kp} code={code} onAdded={wallet.refresh} />
+        <>
+          <AddMoneySheet open={sheet === 'money'} onClose={() => setSheet(null)} kp={kp} code={code} onAdded={wallet.refresh} />
+          <CashOutSheet
+            open={sheet === 'send'}
+            onClose={() => setSheet(null)}
+            kp={kp}
+            amount={usdc}
+            code={code}
+            title="Send to your bank"
+          />
+        </>
       ) : (
-        <CashOutSheet open={sheet === 'money'} onClose={() => setSheet(null)} kp={kp} amount={usdc} />
+        <CashOutSheet open={sheet === 'money'} onClose={() => setSheet(null)} kp={kp} amount={usdc} covered />
       )}
       <CurrencySheet open={sheet === 'currency'} onClose={() => setSheet(null)} value={code} onChange={setCode} />
       <Sheet open={sheet === 'reset'} onClose={() => setSheet(null)} title="Start over?">

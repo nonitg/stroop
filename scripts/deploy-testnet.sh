@@ -28,10 +28,10 @@ else
   stellar contract invoke --id "$SAC" --source rp-issuer --network $NET -- set_admin --new_admin "$FAUCET"
 fi
 
-# 1% service fee (100 bps) to the operator treasury; rp-admin doubles as the demo mediator.
+# 0.5% service fee (50 bps) to the operator treasury; rp-admin doubles as the demo mediator.
 # The treasury needs a USDC trustline to receive fees.
 stellar tx new change-trust --line "USDC:$ISSUER" --source rp-admin --network $NET >/dev/null 2>&1 || true
-FEE_BPS=100
+FEE_BPS=${FEE_BPS:-50}
 RESERVE=$(stellar contract deploy --wasm target/wasm32v1-none/release/rent_reserve.wasm \
   --source rp-admin --network $NET -- --token "$SAC" --treasury "$ADMIN" --fee_bps $FEE_BPS)
 

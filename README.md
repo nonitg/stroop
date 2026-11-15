@@ -14,7 +14,7 @@ First customer: international students (about 690,000 study-permit holders in Ca
 
 | Contract | ID |
 | --- | --- |
-| Rent reserve (Soroban) | [`CAAV5OIX7LCWNOLNIBQODIDNQ3E5GTU6H6PYU5PXAHIDZL7WH6Q4JBA6`](https://stellar.expert/explorer/testnet/contract/CAAV5OIX7LCWNOLNIBQODIDNQ3E5GTU6H6PYU5PXAHIDZL7WH6Q4JBA6) |
+| Rent reserve (Soroban) | [`CAC6PNPORQRORWN2BCUM7WAK3UR647J7KF76GITYDP5PUUQEHV46YKL7`](https://stellar.expert/explorer/testnet/contract/CAC6PNPORQRORWN2BCUM7WAK3UR647J7KF76GITYDP5PUUQEHV46YKL7) |
 | Test USDC (Stellar Asset Contract) | [`CBPPI4PD6JOCLHDKRQ4ROBL5Z2YRIATOG4A5K6MPLUERBUXPQHXHU5OD`](https://stellar.expert/explorer/testnet/contract/CBPPI4PD6JOCLHDKRQ4ROBL5Z2YRIATOG4A5K6MPLUERBUXPQHXHU5OD) |
 | Test USDC faucet (SAC admin) | [`CCYT3OCJ4N5TJSXULBW5HBHDNJSJ6NNXRVEPSBO72DEA6E3YU4LB5BYH`](https://stellar.expert/explorer/testnet/contract/CCYT3OCJ4N5TJSXULBW5HBHDNJSJ6NNXRVEPSBO72DEA6E3YU4LB5BYH) |
 
@@ -25,7 +25,7 @@ The test USDC is a classic Stellar asset (`USDC:GDLAVU5VJNJJFAL7TDMPYASQ6SFTENCC
 No wallet extension needed; everything runs on Testnet with play money.
 
 1. Open the app → **Student & family** → *Create demo account* (gets 20,000 test USDC).
-2. *Use a demo landlord* → *Lock $12,120* (12 × $1,000 rent + 1% fee, charged only after move-in).
+2. *Use a demo landlord* → *Lock* (12 × $1,000 rent + a 0.5% fee, charged only after move-in; shown in your own currency).
 3. **Landlord** tab → open the lease's proof page (what a landlord sees from the tenant's link) → *Accept lease*.
 4. **Student & family** → *Confirm move-in*: month 1 is paid and the fee is collected.
 5. **Landlord** → *Try to withdraw early*: **blocked by the contract**. Wait a minute (demo clock: 1 month = 1 minute) → *Collect rent*.
@@ -51,7 +51,7 @@ Family (abroad)                 Rent reserve contract                 Landlord (
 
 | Rule | Function | Who must sign |
 | --- | --- | --- |
-| Lock `rent × months` + a 1% service fee for a named landlord and mediator | `create` | payer |
+| Lock `rent × months` + a 0.5% service fee for a named landlord and mediator | `create` | payer |
 | Landlord commits to the terms and mediator (payer can cancel freely before this) | `accept` | landlord |
 | Landlord records the keys as handed over; payer can no longer reclaim | `hand_over` | landlord |
 | Move-in starts the schedule, pays month one, collects the fee | `move_in` | payer |

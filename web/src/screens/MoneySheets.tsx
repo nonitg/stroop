@@ -71,15 +71,26 @@ export function AddMoneySheet(props: {
 type Phase = 'idle' | 'working' | 'open' | 'error'
 const STEPS = ['Connect to the cash-out partner', 'Sign in with your Stroop account', 'Enter your bank on their form']
 
-/** Off-ramp: received rent goes to a Canadian bank through a Stellar anchor (real SEP-10/SEP-24 on SDF's test anchor). */
-export function CashOutSheet(props: { open: boolean; onClose: () => void; kp: Keypair; amount: number }) {
-  const { open, onClose, kp, amount } = props
+/**
+ * Off-ramp: US dollars on Stroop go to a bank through a licensed partner (real SEP-10/SEP-24 on SDF's test anchor).
+ * Landlords cash out to C$ with the fee paid back; renters send refunds home in their own currency.
+ */
+export function CashOutSheet(props: {
+  open: boolean
+  onClose: () => void
+  kp: Keypair
+  amount: number
+  code?: string
+  covered?: boolean
+  title?: string
+}) {
+  const { open, onClose, kp, amount, code = 'CAD', covered = false, title = 'Cash out' } = props
   const [phase, setPhase] = useState<Phase>('idle')
   const [step, setStep] = useState(-1)
   const [error, setError] = useState('')
   const [status, setStatus] = useState<string | null>(null)
   const [poll, setPoll] = useState<(() => Promise<string>) | null>(null)
-  const q = offRampQuote(amount)
+  const q = offRampQuote(amount, code, covered)
 
   useEffect(() => {
     if (!poll) return
@@ -121,10 +132,10 @@ export function CashOutSheet(props: { open: boolean; onClose: () => void; kp: Ke
   }
 
   return (
-    <Sheet open={open} onClose={onClose} title="Cash out">
+    <Sheet open={open} onClose={onClose} title={title}>
       <div className="big-total">
         <span className="label">Lands in your bank</span>
-        <span className="amount md num">≈ {fmtMoney(q.receive, 'CAD', { cents: true })}</span>
+        <span className="amount md num">≈ {fmtMoney(q.receive, code, { cents: true })}</span>
       </div>
       <dl className="facts glass strong" style={{ borderRadius: 20, marginTop: 10 }}>
         <div>
@@ -134,13 +145,19 @@ export function CashOutSheet(props: { open: boolean; onClose: () => void; kp: Ke
         <div>
           <dt>Cash-out fee, est. {pct(OFF_RAMP_FEE)}</dt>
           <dd>
-            −{fmtMoney(q.fee, 'CAD', { cents: true })}
+            −{fmtMoney(q.fee, code, { cents: true })}
             <small>Kept by the cash-out partner</small>
           </dd>
         </div>
+        {covered && (
+          <div className="good-row">
+            <dt>Paid back by Stroop</dt>
+            <dd>+{fmtMoney(q.rebate, code, { cents: true })}</dd>
+          </div>
+        )}
         <div>
           <dt>Stroop’s fee</dt>
-          <dd>C$0</dd>
+          <dd>{fmtMoney(0, code)}</dd>
         </div>
       </dl>
 

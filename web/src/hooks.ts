@@ -9,6 +9,7 @@ export type Route =
   | { view: 'home'; role?: Role }
   | { view: 'activity' }
   | { view: 'account' }
+  | { view: 'help' }
   | { view: 'new'; to?: string }
   | { view: 'lease'; id: number }
   | { view: 'proof'; id: number }
@@ -19,7 +20,7 @@ export function parseRoute(hash = window.location.hash): Route {
   if (a === 'lease' && b && Number.isInteger(id)) return { view: 'lease', id }
   if (a === 'proof' && b && Number.isInteger(id)) return { view: 'proof', id }
   if (a === 'new') return { view: 'new', to: b || undefined }
-  if (a === 'activity' || a === 'account') return { view: a }
+  if (a === 'activity' || a === 'account' || a === 'help') return { view: a }
   // Old links (#/family, #/landlord) open that side of the app.
   if (a === 'family' || a === 'landlord') return { view: 'home', role: a }
   return { view: 'home' }
@@ -159,6 +160,9 @@ export function useWallet(role: Role) {
 
   useEffect(() => {
     refresh()
+    // Money can arrive without this person acting (move-in, monthly payouts), so keep the balance live.
+    const t = setInterval(refresh, 8000)
+    return () => clearInterval(t)
   }, [refresh])
 
   const setup = async () => {
