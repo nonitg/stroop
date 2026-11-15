@@ -69,6 +69,16 @@ export const CASH_MONTHS = 3
 export const MIN_LEND_MONTHS = 9
 /** Flat amount off the fee for leases that opt into lending. */
 export const LEND_DISCOUNT = BigInt(ids.lendDiscount)
+/** Rough yearly rate Blend's main USDC pool paid in Nov 2026; only used to show Stroop's likely cut. */
+const LEND_RATE_ESTIMATE = 0.06
+
+/** What Stroop can expect to earn lending this lease, in dollars, if it runs its full term. */
+export function lendEarningsEstimate(rentDollars: number, months: number) {
+  // Each month, rent due more than CASH_MONTHS out is lent: months-2 down to 1 after move-in.
+  const lentMonths = Array.from({ length: months }, (_, i) => Math.max(0, months - 1 - i - CASH_MONTHS))
+  const monthDollars = lentMonths.reduce((a, b) => a + b, 0) * rentDollars
+  return (monthDollars * LEND_RATE_ESTIMATE) / 12
+}
 
 /** Service fee the contract adds on top of the reserve (charged only at move-in). */
 export const feeFor = (reserveUnits: bigint, lend = false) => {

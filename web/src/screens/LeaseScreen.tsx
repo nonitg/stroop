@@ -276,7 +276,7 @@ function LeaseDetail({ lease, role, onChange }: { lease: Lease; role: Role; onCh
                   </span>
                   <span className="txt">
                     <strong>Lending is on</strong>
-                    <span>{lease.lent > 0n ? `${fmtUSD(lease.lent)} lent · Stroop covers any loss` : 'Nothing lent right now'}</span>
+                    <span>{lease.lent > 0n ? `${fmtUSD(lease.lent)} lent · back before it’s due` : 'Nothing lent right now'}</span>
                   </span>
                   <ChevronRight className="chev" size={18} aria-hidden />
                 </button>
@@ -338,7 +338,12 @@ function LeaseDetail({ lease, role, onChange }: { lease: Lease; role: Role; onCh
         </div>
       </div>
 
-      <LendingSheet open={lendInfo} onClose={() => setLendInfo(false)}>
+      <LendingSheet
+        rent={Number(lease.rent) / 1e7}
+        months={lease.periods}
+        open={lendInfo}
+        onClose={() => setLendInfo(false)}
+      >
         {stopLending && (
           <div className="actions">
             <button

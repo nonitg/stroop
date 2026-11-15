@@ -58,7 +58,7 @@ export function Proof({ id, back }: { id: number; back?: boolean }) {
       <section className="glass card hero-card syrup">
         <span className="label">Locked for the landlord · Lease {lease.id}</span>
         <Amount units={lease.held} />
-        <span className="approx">Checked just now. Nobody can move it early.</span>
+        <span className="approx">Checked just now. Nobody can pay it out early.</span>
         <MonthTiles lease={lease} now={now} />
         <div className="hero-foot">
           <Status {...h} sub={undefined} />
@@ -83,10 +83,10 @@ export function Proof({ id, back }: { id: number; back?: boolean }) {
           <div>
             <dt>Later months</dt>
             <dd>
-              Tenant chose lending
+              {lease.lent > 0n ? 'Lent out, back before due' : 'Lent out after move-in'}
               <small>
-                Next {CASH_MONTHS} months always stay here. Stroop covers any loss
-                {cover && ` · cover fund ${fmtUSD(cover.cover)}`}
+                The tenant chose this. The next {CASH_MONTHS} months always stay here. Any loss is paid by Stroop’s fund
+                {cover && ` (${fmtUSD(cover.cover)}, backing ${fmtUSD(cover.lent)} lent)`}.
               </small>
             </dd>
           </div>

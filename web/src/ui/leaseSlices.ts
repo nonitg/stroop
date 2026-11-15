@@ -19,7 +19,7 @@ export function leaseSlices(l: Lease, role: Role): Slice[] {
       tone: 'lent',
       value: fromUnits(t.lent),
       label: 'Locked, lent out',
-      who: 'Back before it’s due. Stroop covers any loss',
+      who: 'Back before it’s due. Losses paid by Stroop’s fund',
       amount: fmtUSD(t.lent),
     },
     { tone: 'back', value: fromUnits(t.returned), label: family ? 'Back to you' : 'Back to family', amount: fmtUSD(t.returned) },

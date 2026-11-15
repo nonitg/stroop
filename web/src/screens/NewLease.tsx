@@ -102,7 +102,7 @@ export function NewLease({ to }: { to?: string }) {
           </span>
           <h1 style={{ margin: '0 0 10px' }}>Rent locked.</h1>
           <p className="lede" style={{ margin: '0 auto' }}>
-            Send your landlord the proof link. They’ll see {fmtUSD(lockUnits)} waiting for them.
+            Send your landlord the proof link. They’ll see {fmtUSD(rentTotal)} waiting for them.
           </p>
           <div style={{ display: 'grid', gap: 10, width: '100%', marginTop: 32 }}>
             <button className="btn primary" onClick={() => share(verifyLink(created), 'Proof link', 'Send it to your landlord.')}>
@@ -257,13 +257,15 @@ export function NewLease({ to }: { to?: string }) {
               </button>
             )}
             <p className="fine" style={{ marginTop: 8 }}>
-              {fmtUSD(lockUnits)} held for your landlord · testnet uses your test balance
+              {fmtUSD(rentTotal)} for your landlord + {fmtUSD(fee)} Stroop fee · testnet uses your test balance
             </p>
           </div>
         </Review>
       )}
 
       <LendingSheet
+        rent={rentNum}
+        months={months}
         open={sheet === 'lend'}
         onClose={() => setSheet(null)}
         onAccept={() => {
@@ -374,8 +376,8 @@ function Review(props: {
                 <HandCoins size={18} aria-hidden />
               </span>
               <span className="txt">
-                <strong>Save {fmtUSD(LEND_DISCOUNT)}</strong>
-                <span>{lend ? 'On · Stroop covers any loss' : 'Let Stroop lend months you won’t need yet'}</span>
+                <strong>Lend unused months</strong>
+                <span>{fmtUSD(LEND_DISCOUNT)} off Stroop’s fee</span>
               </span>
               <span className="switch" aria-hidden />
             </button>
