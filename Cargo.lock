@@ -524,6 +524,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "demo_vault"
+version = "0.0.0"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
 name = "der"
 version = "0.7.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1285,6 +1292,7 @@ dependencies = [
 name = "rent_reserve"
 version = "0.0.0"
 dependencies = [
+ "demo_vault",
  "soroban-sdk",
 ]
 

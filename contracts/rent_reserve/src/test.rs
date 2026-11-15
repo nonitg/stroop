@@ -19,6 +19,7 @@ struct Setup<'a> {
     landlord: Address,
     mediator: Address,
     treasury: Address,
+    vault: Address,
 }
 
 fn setup() -> Setup<'static> {
@@ -37,9 +38,10 @@ fn setup() -> Setup<'static> {
     let treasury = Address::generate(&env);
     usdc_admin.mint(&payer, &(TOTAL + FEE));
 
-    let id = env.register(RentReserve, (&sac.address(), &treasury, &100u32));
+    let vault = env.register(demo_vault::DemoVault, (&sac.address(), &treasury));
+    let id = env.register(RentReserve, (&sac.address(), &treasury, &100u32, &50u32, &vault));
     let client = RentReserveClient::new(&env, &id);
-    Setup { env, client, usdc, usdc_admin, payer, landlord, mediator, treasury }
+    Setup { env, client, usdc, usdc_admin, payer, landlord, mediator, treasury, vault }
 }
 
 fn err(e: Error) -> soroban_sdk::Error {
@@ -51,7 +53,7 @@ fn advance(env: &Env, secs: u64) {
 }
 
 fn new_lease(s: &Setup) -> u64 {
-    s.client.create(&s.payer, &s.landlord, &s.mediator, &RENT, &12, &MONTH, &WINDOW)
+    s.client.create(&s.payer, &s.landlord, &s.mediator, &RENT, &12, &MONTH, &WINDOW, &false)
 }
 
 fn active_lease(s: &Setup) -> u64 {
@@ -280,7 +282,7 @@ fn rejects_bad_terms() {
     ];
     for (landlord, mediator, rent, periods, period, window) in cases {
         assert_eq!(
-            c.try_create(&s.payer, &landlord, &mediator, &rent, &periods, &period, &window),
+            c.try_create(&s.payer, &landlord, &mediator, &rent, &periods, &period, &window, &false),
             Err(Ok(err(Error::InvalidTerms)))
         );
     }
@@ -292,5 +294,113 @@ fn rejects_excessive_fee_config() {
     let env = Env::default();
     let token = Address::generate(&env);
     let treasury = Address::generate(&env);
-    env.register(RentReserve, (&token, &treasury, &(MAX_FEE_BPS + 1)));
+    env.register(RentReserve, (&token, &treasury, &(MAX_FEE_BPS + 1), &0u32, &token));
+}
+
+// --- Lending -------------------------------------------------------------
+
+const LEND_FEE: i128 = TOTAL / 200; // 0.5%
+
+fn vault(s: &Setup) -> demo_vault::DemoVaultClient<'static> {
+    demo_vault::DemoVaultClient::new(&s.env, &s.vault)
+}
+
+/// Lending lease that has moved in, with `cover` in the cover fund.
+fn lending_lease(s: &Setup, cover: i128) -> u64 {
+    if cover > 0 {
+        s.usdc_admin.mint(&s.treasury, &cover);
+        s.client.add_cover(&s.treasury, &cover);
+    }
+    let id = s.client.create(&s.payer, &s.landlord, &s.mediator, &RENT, &12, &MONTH, &WINDOW, &true);
+    s.client.accept(&id);
+    s.client.move_in(&id);
+    id
+}
+
+#[test]
+fn lending_keeps_three_months_in_cash_and_pays_every_month() {
+    let s = setup();
+    let id = lending_lease(&s, 1_000 * RENT);
+    // Month 1 paid; months 2-4 stay in cash; months 5-12 are lent.
+    let l = s.client.get_lease(&id);
+    assert_eq!(l.fee, LEND_FEE);
+    assert_eq!(l.lent, RENT * 8);
+    assert_eq!(vault(&s).owed(&s.client.address), RENT * 8);
+    assert_eq!(s.client.cover_status(), (1_000 * RENT, RENT * 8));
+
+    advance(&s.env, MONTH);
+    s.client.release(&id);
+    assert_eq!(s.client.get_lease(&id).lent, RENT * 7);
+
+    advance(&s.env, MONTH * 20);
+    s.client.release(&id);
+    let l = s.client.get_lease(&id);
+    assert_eq!(l.status, Status::Completed);
+    assert_eq!((l.held, l.lent), (0, 0));
+    assert_eq!(s.usdc.balance(&s.landlord), TOTAL);
+    assert_eq!(s.client.cover_status(), (1_000 * RENT, 0));
+}
+
+#[test]
+fn cover_fund_makes_up_a_lending_loss() {
+    let s = setup();
+    let id = lending_lease(&s, 2 * RENT);
+    vault(&s).simulate_loss(&(RENT + RENT / 2));
+
+    advance(&s.env, MONTH * 20);
+    s.client.release(&id);
+    let l = s.client.get_lease(&id);
+    assert_eq!(l.status, Status::Completed);
+    assert_eq!(l.covered, RENT + RENT / 2);
+    assert_eq!(s.usdc.balance(&s.landlord), TOTAL);
+    assert_eq!(s.client.cover_status(), (RENT / 2, 0));
+}
+
+#[test]
+fn lending_never_exceeds_what_cover_can_back() {
+    let s = setup();
+    let id = lending_lease(&s, 0);
+    assert_eq!(s.client.get_lease(&id).lent, 0);
+
+    // 10% cover backs 10x its size.
+    s.usdc_admin.mint(&s.treasury, &(RENT / 2));
+    s.client.add_cover(&s.treasury, &(RENT / 2));
+    s.client.rebalance(&id);
+    assert_eq!(s.client.get_lease(&id).lent, RENT * 5);
+}
+
+#[test]
+fn payer_can_switch_lending_off_and_end_early_refunds_lent_rent() {
+    let s = setup();
+    let id = lending_lease(&s, 1_000 * RENT);
+    s.client.set_lending(&id, &false);
+    assert_eq!(s.client.get_lease(&id).lent, 0);
+    assert_eq!(vault(&s).owed(&s.client.address), 0);
+
+    s.client.set_lending(&id, &true);
+    assert_eq!(s.client.get_lease(&id).lent, RENT * 8);
+    s.client.end_early(&id, &s.payer);
+    assert_eq!(s.client.end_early(&id, &s.landlord), RENT * 11);
+    assert_eq!(s.client.get_lease(&id).lent, 0);
+}
+
+#[test]
+fn treasury_cannot_pull_cover_below_ten_percent_of_lent_rent() {
+    let s = setup();
+    lending_lease(&s, RENT);
+    assert_eq!(s.client.cover_status(), (RENT, RENT * 8));
+    assert_eq!(s.client.try_take_cover(&(RENT / 5 + 1)), Err(Ok(err(Error::CoverTooLow))));
+    s.client.take_cover(&(RENT / 5));
+}
+
+#[test]
+fn mediator_split_recalls_lent_rent_first() {
+    let s = setup();
+    let id = lending_lease(&s, 1_000 * RENT);
+    s.client.dispute(&id, &s.payer);
+    s.client.resolve(&id, &(RENT * 3));
+    assert_eq!(s.usdc.balance(&s.landlord), RENT * 4);
+    // Minted with the regular fee; the lending fee is half, so the rest stays with the payer.
+    assert_eq!(s.usdc.balance(&s.payer), RENT * 8 + FEE - LEND_FEE);
+    assert_eq!(s.client.cover_status(), (1_000 * RENT, 0));
 }
