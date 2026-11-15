@@ -348,7 +348,8 @@ h1, h2, h3, p { margin: 0; }
 .blk.fee.held { background: var(--syrup); opacity: .55; }
 .blk.paid { background: var(--ink); }
 .blk.back { background: var(--back); }
-.blk.ghost { background: #E4E2DB; }
+.blk.ghost { background: transparent; box-shadow: inset 0 0 0 1px var(--line-2); }
+.blk.fee.back { background: var(--back); opacity: .55; }
 .blk.in-r { animation: inR .55s var(--ease); }
 .blk.in-l { animation: inL .55s var(--ease); }
 @keyframes inR { from { transform: translateX(-40px); opacity: 0; } }
@@ -995,10 +996,11 @@ function renderVault() {
   const backMonths = Math.round(Math.max(0, w.back - (l.feeTaken ? 0 : RENT * n * FEE)) / RENT)
   const anim = S.fresh
   const blocks = (count, cls, animCls, newest) => Array.from({ length: count }, (_, i) => `<div class="blk ${cls} ${anim && i >= count - newest ? animCls : ''}"></div>`).join('')
-  const centerStack = draft ? Array.from({ length: n }, () => '<div class="blk ghost"></div>').join('') : `${blocks(lockedMonths, 'locked', '', 0)}${w.feeHeld ? '<div class="blk fee held" title="Stroop fee, held until move-in"></div>' : ''}`
+  // Before locking, the money is still with the family: it starts left, moves to the middle, then right.
+  const leftStack = draft ? `${blocks(n, 'back', '', 0)}<div class="blk fee back"></div>` : blocks(backMonths, 'back', 'in-l', anim === 'back' ? backMonths : 0)
+  const centerStack = draft ? Array.from({ length: n }, () => '<div class="blk ghost"></div>').join('') : `${blocks(lockedMonths, 'locked', 'in-r', anim === 'lock' ? lockedMonths : 0)}${w.feeHeld ? '<div class="blk fee held" title="Stroop fee, held until move-in"></div>' : ''}`
   const paidNew = anim === 'month' || anim === 'movein' ? 1 : 0
-  const backNew = anim === 'back' ? backMonths : 0
-  const headline = draft ? `<p class="big num">${usd(0)}</p><p class="small">Nothing locked yet</p>` : `<p class="big num">${usd(w.locked + w.feeHeld)}</p><p class="small">locked in Stroop</p>`
+  const headline = draft ? `<p class="big num">${usd(0)}</p><p class="small">locked yet. It’s all still in the family’s bank.</p>` : `<p class="big num">${usd(w.locked + w.feeHeld)}</p><p class="small">locked in Stroop</p>`
   const fees = draft ? '' : `<div class="fees num"><div class="sec-title"><span>Fees so far, by who keeps them</span></div>
     ${q.fx ? `<div class="r"><span>Exchange partner</span><span>${local(q.fx, S.fam.cur)}</span></div>` : ''}
     <div class="r"><span>Stroop</span><span>${l.feeTaken ? usd(q.feeUsd) : w.feeHeld ? `${usd(0)} <span class="small">(${usd(q.feeUsd)} held)</span>` : usd(0)}</span></div>
@@ -1017,9 +1019,9 @@ function renderVault() {
     <h2>Where the money is</h2>
     <div class="v-total" aria-live="polite">${headline}</div>
     <div class="cols" aria-hidden="true" style="--n:${n};--bh:${n > 12 ? Math.max(7, Math.floor(220 / n) - 3) + 'px' : '17px'}">
-      <div class="col"><div class="stack">${blocks(backMonths, 'back', 'in-l', backNew)}</div><div class="col-foot"><b>${usd(w.back)}</b><span>Back to the family</span></div></div>
+      <div class="col"><div class="stack">${leftStack}</div><div class="col-foot"><b>${usd(draft ? RENT * n * (1 + FEE) : w.back)}</b><span>With the family</span></div></div>
       <div class="col center"><div class="stack">${centerStack}</div><div class="col-foot"><b>${usd(w.locked + w.feeHeld)}</b><span>Locked</span></div></div>
-      <div class="col"><div class="stack">${blocks(l.paid, 'paid', 'in-r', paidNew)}</div><div class="col-foot"><b>${usd(w.paid)}</b><span>Paid to the landlord</span></div></div>
+      <div class="col"><div class="stack">${blocks(l.paid, 'paid', 'in-r', paidNew)}</div><div class="col-foot"><b>${usd(w.paid)}</b><span>With the landlord</span></div></div>
     </div>
     <p class="v-rule">Neither side holds it. The contract pays one month on each rent day and nothing early.</p>
     <div class="demo">${demo}</div>
@@ -1113,6 +1115,7 @@ const A = {
     log('fam', `Locked ${usd(q.lockUsd)} for ${P.landlordFull}`, usd(q.lockUsd))
     fly('#fam .steps', '#vault .col.center', usd(q.lockUsd))
     S.fam.screen = 'locked'
+    S.fresh = 'lock'
     render()
   },
   'fam-send'() {
