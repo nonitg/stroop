@@ -25,15 +25,17 @@ Testnet uses `demo_vault` as a stand-in for Blend (it can simulate a loss). Main
 
 **Family (one consent sheet, three facts):**
 1. The next 3 months are never lent. Your landlord is paid on time.
-2. If lending loses money, Stroop pays it back, with the live cover-fund balance.
-3. Stroop keeps what lending earns. You get US$50 off. Turn it off any time.
+2. If lending loses money, Stroop's fund pays it, with the live fund balance. The limit sits right next to the promise: only a loss bigger than the whole fund could leave the lease short.
+3. Stroop keeps what lending earns, about US$X on this lease (a dollar estimate, no rate). You get US$50 off. Switch off any time; the discount stays.
 
-Then one plain line with the real limit: "Not a bank deposit or insurance. If losses ever went past the cover fund, the lease could come up short."
+Then one fine-print line: "Not a bank deposit or insurance."
+
+A persona test showed that putting "Stroop covers any loss" in large text with the limit hidden in fine print felt like a trick, and that hiding Stroop's earnings made the US$50 look stingy. Both were fixed this way.
 
 **Landlord (proof page):** "Tenant chose lending · Next 3 months always stay here · Stroop covers any loss · cover fund US$X". Lent months are striped on the month tiles.
 
 **Left out on purpose:**
-- **Rates, APY, earnings.** The family earns nothing from lending, so a rate invites the wrong comparison and makes it look like interest.
+- **Rates and APY.** The family earns nothing from lending, so a rate invites the wrong comparison and makes it look like interest. Stroop's own likely earnings are shown once, in dollars.
 - **BLND rewards, utilization, backstop, oracles.** These don't change what the family gets, and Stroop absorbs these risks.
 - **The words** "guaranteed", "insured", "safe", "risk-free", "deposit", "savings", "interest". Canada's Competition Act judges ads by the overall impression on an inexperienced consumer.
 
