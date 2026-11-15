@@ -1471,3 +1471,14 @@ dialog.sheet::backdrop {
     margin-top: 2px;
   }
 }
+/* The sticky action fades the content behind it instead of overlapping text. */
+.footer-cta {
+  bottom: 0;
+  margin: 22px -16px 0;
+  padding: 18px 16px calc(14px + var(--safe-b));
+  background: linear-gradient(to top, rgba(243, 238, 229, 0.96) 62%, rgba(243, 238, 229, 0));
+}
+/* Info rows (not tappable) can wrap: their text is the point. */
+div.row .txt span {
+  white-space: normal;
+}

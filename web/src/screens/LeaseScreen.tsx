@@ -39,14 +39,16 @@ export function LeaseScreen({ id }: { id: number }) {
   const { lease: fetched, error } = useLease(id)
   const other: Role = role === 'family' ? 'landlord' : 'family'
   const otherPub = getKeypair(other)?.publicKey()
-  const otherIsParty = !!fetched && !!otherPub && (fetched.payer === otherPub || fetched.landlord === otherPub)
+  const myPub = wallet.kp?.publicKey()
+  const isParty = (pub?: string) => !!fetched && !!pub && (fetched.payer === pub || fetched.landlord === pub)
+  const otherIsParty = isParty(otherPub)
+  // Switch sides only when this side isn't on the lease; in a demo browser both sides often are.
+  const switchSides = !mine && !isParty(myPub) && otherIsParty
   useEffect(() => {
-    if (!mine && otherIsParty) setRole(other)
-  }, [mine, otherIsParty, other, setRole])
+    if (switchSides) setRole(other)
+  }, [switchSides, other, setRole])
 
-  const lease =
-    mine ??
-    (fetched && (fetched.payer === wallet.kp?.publicKey() || fetched.landlord === wallet.kp?.publicKey()) ? fetched : null)
+  const lease = mine ?? (isParty(myPub) ? fetched : null)
   if (lease) return <LeaseDetail lease={lease} role={role} onChange={refresh} />
   if (fetched && !otherIsParty) return <Proof id={id} back />
   if (error) return <Proof id={id} back />
