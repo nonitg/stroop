@@ -60,7 +60,7 @@ export function ToastProvider({ children, view }: { children: ReactNode; view: s
                 </span>
               )}
             </div>
-            <button className="icon-btn" onClick={() => dismiss(t.id)} aria-label="Dismiss">
+            <button className="x" onClick={() => dismiss(t.id)} aria-label="Dismiss">
               <X size={16} aria-hidden />
             </button>
             <span className="toast-timer" aria-hidden />

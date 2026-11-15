@@ -2,21 +2,19 @@ import { fromUnits } from '../stellar'
 import { useTween } from '../hooks'
 import { fmtMoney } from '../money'
 
-/** A USDC amount in US dollars that eases to new values; the currency and cents sit quieter. */
-export function Money({ units, className = '' }: { units: bigint | number; className?: string }) {
+/** A big US$ amount that eases to new values, so money visibly moves when it moves. */
+export function Amount({ units, size }: { units: bigint | number; size?: 'md' }) {
   const target = typeof units === 'bigint' ? fromUnits(units) : units
   const shown = useTween(target)
   const digits = fmtMoney(shown, 'USD', { cents: true }).replace('US$', '')
   const dot = digits.lastIndexOf('.')
   return (
-    <span className={`money num ${className}`}>
+    <span className={`amount${size ? ` ${size}` : ''}`}>
       <span className="sr-only">{fmtMoney(target, 'USD', { cents: true })}</span>
-      <span className="cur" aria-hidden>
-        US$
-      </span>
-      <span aria-hidden>{digits.slice(0, dot)}</span>
-      <span className="cents" aria-hidden>
-        {digits.slice(dot)}
+      <span aria-hidden>
+        <span className="cur">US$</span>
+        {digits.slice(0, dot)}
+        <span className="cents">{digits.slice(dot)}</span>
       </span>
     </span>
   )

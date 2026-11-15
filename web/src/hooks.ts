@@ -1,19 +1,32 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import type { Keypair } from '@stellar/stellar-sdk'
-import { type Lease, type Role, explainError, getBalances, getKeypair, leasesFor, setupWallet, txFee } from './stellar'
+import { type Lease, type Role, explainError, getBalances, getKeypair, getLease, leasesFor, setupWallet } from './stellar'
 
 // ---------- Routing (hash based so the static build works anywhere) ----------
 
-export type Route = { view: 'family' } | { view: 'landlord' } | { view: 'verify'; id?: number } | { view: 'how' }
+export type Route =
+  | { view: 'home'; role?: Role }
+  | { view: 'activity' }
+  | { view: 'account' }
+  | { view: 'new'; to?: string }
+  | { view: 'lease'; id: number }
+  | { view: 'proof'; id: number }
 
-function parseRoute(): Route {
-  const h = window.location.hash.replace(/^#\/?/, '')
-  if (h.startsWith('lease/')) return { view: 'verify', id: Number(h.split('/')[1]) }
-  if (h === 'verify') return { view: 'verify' }
-  if (h === 'landlord') return { view: 'landlord' }
-  if (h === 'how') return { view: 'how' }
-  return { view: 'family' }
+export function parseRoute(hash = window.location.hash): Route {
+  const [a, b] = hash.replace(/^#\/?/, '').split('/')
+  const id = Number(b)
+  if (a === 'lease' && b && Number.isInteger(id)) return { view: 'lease', id }
+  if (a === 'proof' && b && Number.isInteger(id)) return { view: 'proof', id }
+  if (a === 'new') return { view: 'new', to: b || undefined }
+  if (a === 'activity' || a === 'account') return { view: a }
+  // Old links (#/family, #/landlord) open that side of the app.
+  if (a === 'family' || a === 'landlord') return { view: 'home', role: a }
+  return { view: 'home' }
+}
+
+export const go = (path: string) => {
+  window.location.hash = path
 }
 
 export function useRoute() {
@@ -30,7 +43,57 @@ export function useRoute() {
   return route
 }
 
-export const verifyLink = (id: number) => `${window.location.origin}${window.location.pathname}#/lease/${id}`
+const base = () => `${window.location.origin}${window.location.pathname}`
+export const verifyLink = (id: number) => `${base()}#/lease/${id}`
+/** A landlord's invite: opens the new-lease flow with their account filled in. */
+export const inviteLink = (landlord: string) => `${base()}#/new/${landlord}`
+
+const ROLE_KEY = 'rp:role'
+
+/** Which side of the app this browser shows. Both can exist in one browser for demos. */
+export function useRole() {
+  const [role, setState] = useState<Role | null>(() => {
+    try {
+      const saved = localStorage.getItem(ROLE_KEY)
+      if (saved === 'family' || saved === 'landlord') return saved
+    } catch {
+      /* no storage: fall through */
+    }
+    return getKeypair('family') ? 'family' : getKeypair('landlord') ? 'landlord' : null
+  })
+  const setRole = useCallback((r: Role | null) => {
+    try {
+      if (r) localStorage.setItem(ROLE_KEY, r)
+      else localStorage.removeItem(ROLE_KEY)
+    } catch {
+      /* preference only */
+    }
+    withTransition(() => setState(r))
+  }, [])
+  return [role, setRole] as const
+}
+
+/** One lease, read live from Stellar and refreshed every few seconds. */
+export function useLease(id: number) {
+  const [lease, setLease] = useState<Lease | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const load = useCallback(
+    () =>
+      getLease(id)
+        .then((l) => {
+          setLease(l)
+          setError(null)
+        })
+        .catch((e) => setError(explainError(e))),
+    [id],
+  )
+  useEffect(() => {
+    load()
+    const t = setInterval(load, 8000)
+    return () => clearInterval(t)
+  }, [load])
+  return { lease, error, reload: load }
+}
 
 // ---------- Shared hooks ----------
 
@@ -39,7 +102,10 @@ export const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion:
 /** Applies a state change as a cross-fade between screens where the browser supports it. */
 export function withTransition(update: () => void) {
   if (!document.startViewTransition || reducedMotion()) return update()
-  document.startViewTransition(() => flushSync(update))
+  const t = document.startViewTransition(() => flushSync(update))
+  // A newer navigation can skip this one; that's expected, not an error.
+  t.ready.catch(() => {})
+  t.finished.catch(() => {})
 }
 
 /** Eases a displayed number toward `target`, so balances visibly move when money moves. */
@@ -134,29 +200,6 @@ export function useLeases(pub: string | undefined) {
     return () => clearInterval(t)
   }, [load])
   return { leases, reload: load }
-}
-
-/** Total network fees (XLM) Stellar charged for these transactions; null until all are known. */
-export function useNetworkFees(hashes: string[]) {
-  const [xlm, setXlm] = useState<number | null>(null)
-  const [attempt, setAttempt] = useState(0)
-  const key = hashes.join(',')
-  useEffect(() => {
-    let live = true
-    let retry: ReturnType<typeof setTimeout> | undefined
-    if (!key) return
-    Promise.all(key.split(',').map(txFee))
-      .then((fees) => live && setXlm(fees.reduce((a, b) => a + b, 0)))
-      // A just-sent transaction can take a few seconds to show up on Horizon.
-      .catch(() => {
-        if (live && attempt < 5) retry = setTimeout(() => setAttempt((n) => n + 1), 3000)
-      })
-    return () => {
-      live = false
-      clearTimeout(retry)
-    }
-  }, [key, attempt])
-  return key ? xlm : 0
 }
 
 /** The currency a family pays from, remembered in this browser. */

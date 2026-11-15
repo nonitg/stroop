@@ -30,7 +30,6 @@ export const OFF_RAMP_FEE = 0.005
 export const XLM_USD = 0.4
 /** Measured on testnet: locking a lease costs ~0.18 XLM, mostly to store the lease record on Stellar. */
 export const LOCK_FEE_XLM = 0.18
-/** Measured on testnet: later actions (accept, move-in, monthly payout) cost under 0.001 XLM each. */
 export const ACTION_FEE_XLM = 0.001
 
 export const pct = (f: number) => `${+(f * 100).toFixed(2)}%`
@@ -66,11 +65,4 @@ export function offRampQuote(usdc: number) {
   const gross = usdc * CAD.perUsd
   const fee = gross * OFF_RAMP_FEE
   return { receive: gross - fee, fee, rate: CAD.perUsd }
-}
-
-/** Network fees in plain words: tiny amounts read as "under 1¢". */
-export function fmtNetworkFee(xlm: number) {
-  const usd = xlm * XLM_USD
-  const x = `${xlm.toLocaleString('en-US', { maximumFractionDigits: 4 })} XLM`
-  return usd < 0.01 ? `${x} · under 1¢` : `${x} · about ${fmtMoney(usd, 'USD', { cents: true })}`
 }

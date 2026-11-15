@@ -1,74 +1,77 @@
-import { ArrowUpRight } from 'lucide-react'
-import { CONTRACTS, explorer, resetDemo, short } from './stellar'
-import { type Route, useRoute } from './hooks'
-import { BrandMark } from './components/BrandMark'
-import { FamilyView } from './components/FamilyView'
-import { HowItWorks } from './components/HowItWorks'
-import { LandlordView } from './components/LandlordView'
+import { useEffect } from 'react'
+import { LoaderCircle } from 'lucide-react'
+import { AppContext } from './app'
+import { type Route, useLeases, useRole, useRoute, useWallet } from './hooks'
+import type { Role } from './stellar'
 import { ToastProvider } from './components/ToastProvider'
-import { VerifyView } from './components/VerifyView'
-import './App.css'
-
-const NAV: { view: Route['view']; href: string; label: string; short: string }[] = [
-  { view: 'family', href: '#/family', label: 'Student & family', short: 'Family' },
-  { view: 'landlord', href: '#/landlord', label: 'Landlord', short: 'Landlord' },
-  { view: 'verify', href: '#/verify', label: 'Verify a lease', short: 'Verify' },
-  { view: 'how', href: '#/how', label: 'How it works', short: 'How it works' },
-]
+import { Nav } from './ui/Nav'
+import { AccountScreen } from './screens/AccountScreen'
+import { Activity } from './screens/Activity'
+import { FamilyHome, LandlordHome } from './screens/Home'
+import { LeaseScreen } from './screens/LeaseScreen'
+import { NewLease } from './screens/NewLease'
+import { Proof } from './screens/Proof'
+import { Welcome } from './screens/Welcome'
 
 export default function App() {
   const route = useRoute()
+  const [role, setRole] = useRole()
+  // Old links and invite links decide which side of the app opens.
+  useEffect(() => {
+    if (route.view === 'home' && route.role) setRole(route.role)
+    if (route.view === 'new' && role !== 'family') setRole('family')
+  }, [route, role, setRole])
+
   return (
     <ToastProvider view={route.view}>
-      <header className="topbar">
-        <div className="topbar-inner">
-          <a className="brand" href="#/family" aria-label="Stroop home">
-            <BrandMark />
-            <span className="wordmark">Stroop</span>
-          </a>
-          <nav className="nav" aria-label="Views">
-            {NAV.map((n) => (
-              <a key={n.view} href={n.href} aria-current={route.view === n.view ? 'page' : undefined}>
-                <span className="nav-long">{n.label}</span>
-                <span className="nav-short" aria-hidden>
-                  {n.short}
-                </span>
-              </a>
-            ))}
-          </nav>
-          <a
-            className="network"
-            href={explorer.contract(CONTRACTS.rentReserve)}
-            target="_blank"
-            rel="noreferrer"
-            title="Live on Stellar Testnet. Test money only."
-          >
-            <span className="live-dot" aria-hidden />
-            Testnet
-          </a>
+      <div className="aurora" aria-hidden>
+        <i />
+        <i />
+        <i />
+      </div>
+      {route.view === 'proof' ? (
+        <div className="app">
+          <Proof id={route.id} />
         </div>
-      </header>
-      <main>
-        {route.view === 'family' && <FamilyView />}
-        {route.view === 'landlord' && <LandlordView />}
-        {route.view === 'verify' && <VerifyView key={route.id ?? 'lookup'} id={route.id} />}
-        {route.view === 'how' && <HowItWorks />}
-      </main>
-      <footer className="site-foot">
-        <span>Testnet prototype · test money only · demo accounts live in this browser</span>
-        <a href={explorer.contract(CONTRACTS.rentReserve)} target="_blank" rel="noreferrer" className="foot-link">
-          Contract <span className="mono">{short(CONTRACTS.rentReserve)}</span> <ArrowUpRight size={13} aria-hidden />
-        </a>
-        <button
-          className="foot-link"
-          onClick={() => {
-            resetDemo()
-            window.location.reload()
-          }}
-        >
-          Reset demo
-        </button>
-      </footer>
+      ) : role ? (
+        <SignedIn key={role} role={role} setRole={setRole} route={route} />
+      ) : (
+        <div className="app">
+          <Welcome role={null} onPick={setRole} />
+        </div>
+      )}
     </ToastProvider>
+  )
+}
+
+function SignedIn({ role, setRole, route }: { role: Role; setRole: (r: Role | null) => void; route: Route }) {
+  const wallet = useWallet(role)
+  const { leases, reload } = useLeases(wallet.kp?.publicKey())
+  if (!wallet.checked)
+    return (
+      <div className="splash">
+        <LoaderCircle className="spin" size={26} aria-label="Loading your account" />
+      </div>
+    )
+  if (!wallet.kp || !wallet.balances)
+    return (
+      <div className="app">
+        <Welcome role={role} wallet={wallet} onPick={setRole} />
+      </div>
+    )
+  const refresh = () => Promise.all([reload(), wallet.refresh()])
+  // Full-screen tasks hide the tab bar on phones.
+  const tabs = route.view === 'home' || route.view === 'activity' || route.view === 'account'
+  return (
+    <AppContext.Provider value={{ role, setRole, wallet, leases, refresh }}>
+      <div className="app">
+        <Nav route={route} role={role} mobile={tabs} />
+        {route.view === 'home' && (role === 'family' ? <FamilyHome /> : <LandlordHome />)}
+        {route.view === 'activity' && <Activity />}
+        {route.view === 'account' && <AccountScreen />}
+        {route.view === 'new' && <NewLease to={route.to} />}
+        {route.view === 'lease' && <LeaseScreen key={route.id} id={route.id} />}
+      </div>
+    </AppContext.Provider>
   )
 }

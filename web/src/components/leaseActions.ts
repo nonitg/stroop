@@ -35,9 +35,9 @@ function familyActions(lease: Lease, kp: Keypair, now: number): Action[] {
   if (lease.status === 'Funded')
     actions.push({
       id: 'cancel',
-      label: 'Cancel and get refund',
+      label: 'Cancel lease',
       done: 'Lease cancelled',
-      doneBody: 'The full amount, fee included, is back in your account.',
+      doneBody: 'Everything is back in your balance.',
       tier: 'quiet',
       run: reclaim,
     })
@@ -50,7 +50,7 @@ function familyActions(lease: Lease, kp: Keypair, now: number): Action[] {
         id: 'move-in',
         label: 'Confirm move-in',
         done: 'Move-in confirmed',
-        doneBody: `Month 1 is paid to your landlord and the ${feeLine(lease).amount} service fee was charged.`,
+        doneBody: `Month 1 paid. ${feeLine(lease).amount} Stroop fee taken.`,
         tier: 'primary',
         Icon: KeyRound,
         run: () => reserve.moveIn(kp, id),
@@ -58,18 +58,18 @@ function familyActions(lease: Lease, kp: Keypair, now: number): Action[] {
     if (!handedOver && now > lease.moveInBy)
       actions.push({
         id: 'reclaim',
-        label: 'Take everything back',
+        label: 'Take it all back',
         done: 'Rent and fee returned',
-        doneBody: 'The keys were never handed over, so the full amount is back in your account.',
+        doneBody: 'Everything is back in your balance.',
         tier: 'primary',
         run: reclaim,
       })
     if (handedOver)
       actions.push({
         id: 'dispute',
-        label: window ? "Something's wrong? Raise a dispute" : 'Raise a dispute',
-        done: 'Dispute raised',
-        doneBody: 'Payouts are paused until the mediator settles it.',
+        label: 'Report a problem',
+        done: 'Problem reported',
+        doneBody: 'Payouts are paused for mediation.',
         tier: window ? 'secondary' : 'quiet',
         run: () => reserve.dispute(kp, id),
       })
@@ -78,9 +78,9 @@ function familyActions(lease: Lease, kp: Keypair, now: number): Action[] {
   if (lease.status === 'Active')
     actions.push({
       id: 'dispute',
-      label: 'Raise a dispute',
-      done: 'Dispute raised',
-      doneBody: 'Payouts are paused until the mediator settles it.',
+      label: 'Report a problem',
+      done: 'Problem reported',
+      doneBody: 'Payouts are paused for mediation.',
       tier: 'quiet',
       run: () => reserve.dispute(kp, id),
     })
@@ -98,7 +98,7 @@ function landlordActions(lease: Lease, kp: Keypair, now: number): Action[] {
       id: 'accept',
       label: 'Accept lease',
       done: 'Lease accepted',
-      doneBody: 'The student can now confirm move-in.',
+      doneBody: 'Your tenant can move in.',
       tier: 'primary',
       Icon: BadgeCheck,
       run: () => reserve.accept(kp, id),
@@ -106,9 +106,9 @@ function landlordActions(lease: Lease, kp: Keypair, now: number): Action[] {
   if (lease.status === 'Accepted' && lease.handedOverAt === 0 && now <= lease.moveInBy)
     actions.push({
       id: 'hand-over',
-      label: 'Mark keys handed over',
-      done: 'Keys marked as handed over',
-      doneBody: `The student has ${fmtDuration(disputeWindowSecs(lease))} to confirm move-in or raise a dispute.`,
+      label: 'Keys handed over',
+      done: 'Keys marked handed over',
+      doneBody: `Rent starts in ${fmtDuration(disputeWindowSecs(lease))} unless your tenant objects.`,
       tier: 'primary',
       Icon: KeyRound,
       run: () => reserve.handOver(kp, id),
@@ -116,9 +116,9 @@ function landlordActions(lease: Lease, kp: Keypair, now: number): Action[] {
   if (startsOnRelease(lease, now))
     actions.push({
       id: 'start',
-      label: 'Start lease & collect rent',
+      label: `Start lease · collect ${fmtUSD(lease.rent * BigInt(due))}`,
       done: 'Lease started',
-      doneBody: `${fmtUSD(lease.rent * BigInt(due))} of rent from the handover date is now in your account.`,
+      doneBody: `${fmtUSD(lease.rent * BigInt(due))} is in your balance.`,
       tier: 'primary',
       Icon: HandCoins,
       run: release,
@@ -126,22 +126,22 @@ function landlordActions(lease: Lease, kp: Keypair, now: number): Action[] {
   if (lease.status === 'Active' && due > 0)
     actions.push({
       id: 'collect',
-      label: `Collect ${due} month${due > 1 ? 's' : ''} of rent`,
+      label: `Collect ${fmtUSD(lease.rent * BigInt(due))}`,
       done: 'Rent collected',
-      doneBody: `${fmtUSD(lease.rent * BigInt(due))} is now in your account.`,
+      doneBody: `${fmtUSD(lease.rent * BigInt(due))} is in your balance.`,
       tier: 'primary',
       Icon: HandCoins,
       run: release,
     })
   // Demo of the core protection: with nothing due, the contract refuses to pay out.
   if (lease.status === 'Active' && due === 0)
-    actions.push({ id: 'early', label: 'Try collecting next month early', done: 'Rent collected', tier: 'secondary', Icon: LockKeyhole, run: release })
+    actions.push({ id: 'early', label: 'Collect next month early', done: 'Rent collected', tier: 'secondary', Icon: LockKeyhole, run: release })
   if (lease.landlordOwed > 0n)
     actions.push({
       id: 'claim',
       label: `Claim ${fmtUSD(lease.landlordOwed)}`,
       done: 'Rent claimed',
-      doneBody: `${fmtUSD(lease.landlordOwed)} is now in your account.`,
+      doneBody: `${fmtUSD(lease.landlordOwed)} is in your balance.`,
       tier: 'secondary',
       Icon: HandCoins,
       run: () => reserve.claim(kp, id),
@@ -157,9 +157,9 @@ function endEarlyActions(lease: Lease, kp: Keypair, now: number): Action[] {
     return [
       {
         id: 'cancel-end',
-        label: 'Withdraw proposal',
-        done: 'Proposal withdrawn',
-        doneBody: 'The lease continues as normal.',
+        label: 'Withdraw end request',
+        done: 'Request withdrawn',
+        doneBody: 'The lease continues.',
         tier: 'quiet',
         run: () => reserve.cancelEnd(kp, lease.id),
       },
@@ -167,11 +167,9 @@ function endEarlyActions(lease: Lease, kp: Keypair, now: number): Action[] {
   return [
     {
       id: 'end',
-      label: open ? 'Agree to end lease early' : 'Propose ending lease early',
-      done: open ? 'Lease ended early' : 'Early end proposed',
-      doneBody: open
-        ? 'Rent owed went to the landlord; the rest went back to the family.'
-        : 'Nothing changes unless the other side agrees.',
+      label: open ? 'Agree to end early' : 'End lease early',
+      done: open ? 'Lease ended early' : 'End request sent',
+      doneBody: open ? 'Rent owed was paid. The rest went back to the family.' : 'Nothing changes unless they agree.',
       tier: open ? 'primary' : 'quiet',
       run: () => reserve.endEarly(kp, lease.id),
     },

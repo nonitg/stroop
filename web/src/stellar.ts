@@ -310,22 +310,6 @@ export function secsToNextRelease(l: Lease, nowSecs = Date.now() / 1000): number
   return Math.max(0, Math.ceil(l.start + (elapsedPeriods + 1) * l.periodSecs - nowSecs))
 }
 
-/** Network fee Stellar charged for a transaction, in XLM. Cached: a settled fee never changes. */
-export async function txFee(hash: string): Promise<number> {
-  const key = `rp:fee:${hash}`
-  const cached = localStorage.getItem(key)
-  if (cached) return Number(cached)
-  const res = await fetch(`${NET.horizonUrl}/transactions/${hash}`)
-  if (!res.ok) throw new Error('Transaction not found yet')
-  const xlm = Number((await res.json()).fee_charged) / 1e7
-  try {
-    localStorage.setItem(key, String(xlm))
-  } catch {
-    /* cache is a convenience */
-  }
-  return xlm
-}
-
 // Local log of tx hashes per lease so the UI can link every action to the explorer.
 export interface TxLog {
   leaseId: number
@@ -348,6 +332,16 @@ export function txsFor(leaseId: number): TxLog[] {
   try {
     const all: TxLog[] = JSON.parse(localStorage.getItem('rp:txs') ?? '[]')
     return all.filter((t) => t.leaseId === leaseId)
+  } catch {
+    return []
+  }
+}
+
+/** Every logged transaction in this browser, newest first. */
+export function allTxs(): TxLog[] {
+  try {
+    const all: TxLog[] = JSON.parse(localStorage.getItem('rp:txs') ?? '[]')
+    return all.reverse()
   } catch {
     return []
   }
