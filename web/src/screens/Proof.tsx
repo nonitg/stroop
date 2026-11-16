@@ -2,7 +2,7 @@ import { ArrowLeft, ArrowUpRight, BadgeCheck, LoaderCircle } from 'lucide-react'
 import { CASH_MONTHS, CONTRACTS, explorer, fmtUSD } from '../stellar'
 import { useLease, useNow } from '../hooks'
 import { fmtDate, headline } from '../leaseText'
-import { fmtMoney, offRampQuote } from '../money'
+import { fmtMoney, landlordPayout } from '../money'
 import { mediatorName } from '../mediators'
 import { Amount } from '../ui/Amount'
 import { useCover } from '../ui/LendingSheet'
@@ -50,7 +50,7 @@ export function Proof({ id, back }: { id: number; back?: boolean }) {
     )
   // Public viewers see the landlord's side of the story: what's promised to them.
   const h = headline(lease, 'landlord', '', now)
-  const monthly = offRampQuote(Number(lease.rent) / 1e7)
+  const monthly = landlordPayout(Number(lease.rent) / 1e7)
   return (
     <main className="screen bare">
       {top}
@@ -69,10 +69,7 @@ export function Proof({ id, back }: { id: number; back?: boolean }) {
           <dt>Each month</dt>
           <dd>
             {fmtUSD(lease.rent)}
-            <small>
-              ≈ {fmtMoney(monthly.receive, 'CAD')} in the bank after a 0.5% cash-out fee (
-              {fmtMoney(monthly.fee, 'CAD', { cents: true })})
-            </small>
+            <small>≈ {fmtMoney(monthly.receive, 'CAD')} in the landlord’s bank. Stroop pays the cash-out fee.</small>
           </dd>
         </div>
         <div>

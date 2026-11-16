@@ -28,10 +28,10 @@ else
   stellar contract invoke --id "$SAC" --source rp-issuer --network $NET -- set_admin --new_admin "$FAUCET"
 fi
 
-# 1% service fee (100 bps) to the operator treasury; rp-admin doubles as the demo mediator.
+# 0.5% service fee (50 bps) to the operator treasury; rp-admin doubles as the demo mediator.
 # The treasury needs a USDC trustline to receive fees.
 stellar tx new change-trust --line "USDC:$ISSUER" --source rp-admin --network $NET >/dev/null 2>&1 || true
-FEE_BPS=100
+FEE_BPS=${FEE_BPS:-50}
 # Leases that opt into lending get a flat US$50 off; Stroop keeps the vault's earnings.
 LEND_DISCOUNT=500000000
 # Testnet stand-in for the Blend USDC pool adapter.

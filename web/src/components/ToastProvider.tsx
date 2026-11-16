@@ -59,6 +59,13 @@ export function ToastProvider({ children, view }: { children: ReactNode; view: s
                   </a>
                 </span>
               )}
+              {t.href && (
+                <span className="toast-meta">
+                  <a href={t.href} onClick={() => dismiss(t.id)}>
+                    View lease
+                  </a>
+                </span>
+              )}
             </div>
             <button className="x" onClick={() => dismiss(t.id)} aria-label="Dismiss">
               <X size={16} aria-hidden />

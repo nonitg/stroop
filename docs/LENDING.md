@@ -17,7 +17,7 @@ The family can let Stroop lend rent it won't need for months. Stroop keeps what 
 | Short return → the cover fund pays the gap (`covered` on the lease) | The family and landlord don't carry the loss |
 | Lending stops at 10× the cover fund; treasury can't pull cover below 10% of lent rent | The promise is backed by money, not words |
 | Payer can switch off any time (`set_lending`); disputes, early ends and refunds recall everything first | The family stays in control |
-| Flat US$50 discount, 9+ month leases only | A flat amount that doesn't grow with amount or time, so it isn't interest. Shorter leases have too little to lend |
+| Flat US$50 discount (never more than the fee, which is 0.5%), 9+ month leases only | A flat amount that doesn't grow with amount or time, so it isn't interest. Shorter leases have too little to lend |
 
 Two venues share one `deposit` / `withdraw` interface, so the rent contract doesn't change between them:
 

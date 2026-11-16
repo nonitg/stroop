@@ -2,17 +2,23 @@ import { useEffect, useState } from 'react'
 import {
   ArrowLeft,
   ArrowUpRight,
+  CalendarX2,
   ChevronRight,
+  Flag,
   HandCoins,
   LoaderCircle,
   LockKeyhole,
+  type LucideIcon,
   ReceiptText,
   Share,
   ShieldCheck,
+  Undo2,
+  X,
 } from 'lucide-react'
 import { useApp } from '../app'
 import {
   CONTRACTS,
+  FEE_PCT,
   type Lease,
   type Role,
   disputeWindowSecs,
@@ -29,7 +35,7 @@ import {
 } from '../stellar'
 import { useHomeCurrency, useLease, useNow, verifyLink } from '../hooks'
 import { fmtDate, fmtDuration, headline } from '../leaseText'
-import { ON_RAMP_FEE, currency, fmtMoney, offRampQuote } from '../money'
+import { currency, fmtMoney, landlordPayout, offRampQuote } from '../money'
 import { mediatorName } from '../mediators'
 import { type Action, leaseActions } from '../components/leaseActions'
 import { useToast } from '../components/useToast'
@@ -43,6 +49,7 @@ import { leaseSlices } from '../ui/leaseSlices'
 import { useShare } from '../ui/share'
 import { Problem } from './MoneySheets'
 import { Proof } from './Proof'
+import { hushNews } from '../news'
 
 /** #/lease/:id — your lease if you're on it (switching sides if the other local account is), else the public proof. */
 export function LeaseScreen({ id }: { id: number }) {
@@ -68,6 +75,32 @@ export function LeaseScreen({ id }: { id: number }) {
     <main className="screen splash" aria-busy="true">
       <LoaderCircle className="spin" size={26} aria-label="Loading lease" />
     </main>
+  )
+}
+
+const DANGER = new Set(['cancel', 'dispute'])
+const ROW_ICON: Record<string, LucideIcon> = {
+  cancel: X,
+  dispute: Flag,
+  end: CalendarX2,
+  'cancel-end': Undo2,
+  early: LockKeyhole,
+  claim: HandCoins,
+}
+const ROW_SUB: Record<string, string> = {
+  cancel: 'Everything comes back, fee included',
+  dispute: 'Pauses payouts for mediation',
+  end: 'Only if both sides agree',
+  early: 'The lease rules will refuse it',
+}
+
+/** Icon tile for a less-common lease action; red for the ones that stop or undo things. */
+function RowIcon({ id }: { id: string }) {
+  const Icon = ROW_ICON[id] ?? ChevronRight
+  return (
+    <span className={`ico${DANGER.has(id) ? ' danger' : ''}`}>
+      <Icon size={18} aria-hidden />
+    </span>
   )
 }
 
@@ -107,6 +140,7 @@ function LeaseDetail({ lease, role, onChange }: { lease: Lease; role: Role; onCh
     setBusy(a.id)
     const t0 = performance.now()
     try {
+      hushNews(lease.id)
       const { hash } = await a.run()
       if (hash) logTx({ leaseId: lease.id, label: a.done, hash, at: Date.now() })
       toast({ title: a.done, body: a.doneBody, hash, secs: (performance.now() - t0) / 1000 })
@@ -239,7 +273,7 @@ function LeaseDetail({ lease, role, onChange }: { lease: Lease; role: Role; onCh
             {!family && (
               <div>
                 <dt>Each month in your bank</dt>
-                <dd>≈ {fmtMoney(offRampQuote(Number(lease.rent) / 1e7).receive, 'CAD')}</dd>
+                <dd>≈ {fmtMoney(landlordPayout(Number(lease.rent) / 1e7).receive, 'CAD')}</dd>
               </div>
             )}
             {(lease.status === 'Funded' || lease.status === 'Accepted') && (
@@ -257,13 +291,11 @@ function LeaseDetail({ lease, role, onChange }: { lease: Lease; role: Role; onCh
           <ul className="list glass" style={{ marginTop: 14 }}>
             {quiet.map((a) => (
               <li key={a.id}>
-                <button
-                  className={`row${a.id === 'cancel' || a.id === 'dispute' ? ' danger' : ''}`}
-                  onClick={() => pick(a)}
-                  disabled={!!busy}
-                >
+                <button className={`row${DANGER.has(a.id) ? ' danger' : ''}`} onClick={() => pick(a)} disabled={!!busy}>
+                  <RowIcon id={a.id} />
                   <span className="txt">
                     <strong>{label(a)}</strong>
+                    {ROW_SUB[a.id] && <span>{ROW_SUB[a.id]}</span>}
                   </span>
                   <ChevronRight className="chev" size={18} aria-hidden />
                 </button>
@@ -412,7 +444,7 @@ function ConfirmSheet(props: {
   const home = (units: bigint) =>
     code === 'USD'
       ? undefined
-      : `≈ ${fmtMoney((Number(units) / 1e7) * currency(code).perUsd * (1 - ON_RAMP_FEE), code)} in your bank after ~1% exchange`
+      : `≈ ${fmtMoney(offRampQuote(Number(units) / 1e7, code).receive, code)} in your bank after the ~0.5% cash-out fee`
   const spec: { title: string; lede?: string; rows: [string, string, string?][]; cta: string; danger?: boolean } = (() => {
     switch (a.id) {
       case 'accept':
@@ -420,7 +452,7 @@ function ConfirmSheet(props: {
           title: 'Accept this lease?',
           lede: `Your tenant must move in by ${fmtDate(l.moveInBy)}`,
           rows: [
-            ['Each month', rent, `≈ ${fmtMoney(offRampQuote(Number(l.rent) / 1e7).receive, 'CAD')} in your bank`],
+            ['Each month', rent, `≈ ${fmtMoney(landlordPayout(Number(l.rent) / 1e7).receive, 'CAD')} in your bank`],
             ['Term', `${l.periods} months`],
             ['Stroop’s fee for you', 'None'],
             ['Rent is set in US$', 'C$ moves with the rate'],
@@ -440,7 +472,7 @@ function ConfirmSheet(props: {
           lede: 'Only once you have the keys.',
           rows: [
             ['Month 1 to landlord', rent],
-            ['Stroop fee · 1%', fmtUSD(fee)],
+            [`Stroop fee · ${FEE_PCT}`, fmtUSD(fee)],
             ['Stays locked', fmtUSD(l.held - l.rent)],
           ],
           cta: 'Confirm move-in',

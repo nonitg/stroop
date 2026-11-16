@@ -9,6 +9,8 @@ export interface ToastInput {
   secs?: number
   /** Text to show in a selectable field, for when the clipboard is unavailable. */
   copyText?: string
+  /** In-app link to what the toast is about, e.g. the lease. */
+  href?: string
 }
 
 export const ToastContext = createContext<(t: ToastInput) => void>(() => {})

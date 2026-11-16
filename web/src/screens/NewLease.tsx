@@ -3,7 +3,9 @@ import { StrKey } from '@stellar/stellar-sdk'
 import { ArrowLeft, Check, ChevronRight, HandCoins, LoaderCircle, LockKeyhole, Minus, Plus, Share, Sparkles, X } from 'lucide-react'
 import { useApp } from '../app'
 import {
+  FEE_PCT,
   LEND_DISCOUNT,
+  lendSaving,
   MIN_LEND_MONTHS,
   explainError,
   feeFor,
@@ -19,6 +21,7 @@ import { LOCK_FEE_XLM, ON_RAMP_FEE, XLM_USD, currency, fmtMoney, onRampQuote } f
 import { STROOP_DESK, mediatorName, mediatorProblem } from '../mediators'
 import { go, useHomeCurrency, verifyLink } from '../hooks'
 import { useToast } from '../components/useToast'
+import { hushNews } from '../news'
 import { Ledger, MoneyBar, type Slice } from '../ui/MoneyBar'
 import { Sheet } from '../ui/Sheet'
 import { CurrencySheet } from '../ui/CurrencySheet'
@@ -76,6 +79,7 @@ export function NewLease({ to }: { to?: string }) {
     try {
       const { result, hash } = await reserve.create(kp, landlord.trim(), mediator, rentNum, months, lend)
       const id = Number(result)
+      hushNews(id)
       if (hash) logTx({ leaseId: id, label: 'Rent locked', hash, at: Date.now() })
       toast({
         title: 'Rent locked',
@@ -307,7 +311,7 @@ function quoteLease(rent: number, months: number, code: string, lend: boolean) {
     {
       tone: 'fee',
       value: usdFee * perUsd,
-      label: lend ? `Stroop fee · 1% − ${fmtUSD(LEND_DISCOUNT)}` : 'Stroop fee · 1%',
+      label: lend ? `Stroop fee · ${FEE_PCT} − ${fmtUSD(LEND_DISCOUNT)}` : `Stroop fee · ${FEE_PCT}`,
       who: 'Only if you move in',
       amount: local(usdFee * perUsd),
     },
@@ -377,7 +381,7 @@ function Review(props: {
               </span>
               <span className="txt">
                 <strong>Lend unused months</strong>
-                <span>{fmtUSD(LEND_DISCOUNT)} off Stroop’s fee</span>
+                <span>{fmtUSD(lendSaving(rent, months))} off Stroop’s fee</span>
               </span>
               <span className="switch" aria-hidden />
             </button>

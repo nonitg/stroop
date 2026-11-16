@@ -60,9 +60,17 @@ export function onRampQuote(usdc: number, code: string) {
   return { pay: base + fee, fee, rate: c.perUsd }
 }
 
-/** Cashing `usdc` out to a Canadian bank: the off-ramp's cut and what lands. */
-export function offRampQuote(usdc: number) {
-  const gross = usdc * CAD.perUsd
-  const fee = gross * OFF_RAMP_FEE
-  return { receive: gross - fee, fee, rate: CAD.perUsd }
+/**
+ * Sending `usdc` to a bank in `code`: the cash-out partner's cut and what lands.
+ * Stroop pays the cut back for landlords (`covered`), so their full rent arrives.
+ */
+export function offRampQuote(usdc: number, code = 'CAD', covered = false) {
+  const c = currency(code)
+  const gross = usdc * c.perUsd
+  const fee = c.code === 'USD' ? 0 : gross * OFF_RAMP_FEE
+  const rebate = covered ? fee : 0
+  return { gross, fee, rebate, receive: gross - fee + rebate, rate: c.perUsd }
 }
+
+/** What a landlord's rent becomes in their Canadian bank: full amount, cash-out fee paid back by Stroop. */
+export const landlordPayout = (usdc: number) => offRampQuote(usdc, 'CAD', true)

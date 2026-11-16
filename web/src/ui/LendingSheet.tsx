@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { HandCoins, LockKeyhole, ShieldCheck } from 'lucide-react'
-import { CASH_MONTHS, LEND_DISCOUNT, coverStatus, fmtUSD, lendEarningsEstimate } from '../stellar'
+import { CASH_MONTHS, coverStatus, fmtUSD, lendEarningsEstimate, lendSaving } from '../stellar'
 import { fmtMoney } from '../money'
 import { Sheet } from './Sheet'
 
@@ -31,6 +31,7 @@ export function LendingSheet(props: {
   const cover = useCover()
   const fund = cover ? `Stroop’s fund (${fmtUSD(cover.cover)}, public on Stellar)` : 'Stroop’s fund (public on Stellar)'
   const earns = fmtMoney(lendEarningsEstimate(rent, months), 'USD')
+  const saves = fmtUSD(lendSaving(rent, months))
   return (
     <Sheet open={open} onClose={onClose} title={onAccept ? 'Lend unused months?' : 'How lending works'}>
       <p className="lede">Stroop lends out rent you won’t need for months, and brings it back before it’s due.</p>
@@ -69,7 +70,7 @@ export function LendingSheet(props: {
                 Stroop keeps what lending earns, about {earns}
               </strong>
               <span>
-                You get {fmtUSD(LEND_DISCOUNT)} off Stroop’s fee. Switch off any time: lent rent comes back right away,
+                You get {saves} off Stroop’s fee. Switch off any time: lent rent comes back right away,
                 the discount stays.
               </span>
             </span>
@@ -83,7 +84,7 @@ export function LendingSheet(props: {
       {onAccept && (
         <div className="actions">
           <button className="btn primary" onClick={onAccept}>
-            Lend and save {fmtUSD(LEND_DISCOUNT)}
+            Lend and save {saves}
           </button>
           <button className="btn secondary" onClick={onClose}>
             No thanks

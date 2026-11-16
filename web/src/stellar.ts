@@ -11,7 +11,7 @@ import {
   contract,
 } from '@stellar/stellar-sdk'
 import ids from './contracts.json'
-import { fmtMoney } from './money'
+import { fmtMoney, pct } from './money'
 
 export const NET = {
   passphrase: Networks.TESTNET,
@@ -20,6 +20,8 @@ export const NET = {
   friendbot: 'https://friendbot.stellar.org',
 }
 export const CONTRACTS = ids
+/** Stroop's fee, as the deployed contract charges it (e.g. "0.5%"). */
+export const FEE_PCT = pct(ids.feeBps / 10_000)
 export const USDC = new Asset('USDC', ids.usdcIssuer)
 const UNIT = 10_000_000n // USDC has 7 decimals on Stellar
 
@@ -48,7 +50,7 @@ export interface Lease {
   start: number
   paidPeriods: number
   held: bigint
-  /** 1% service fee: held until move-in, refunded if move-in never happens. */
+  /** Service fee: held until move-in, refunded if move-in never happens. */
   fee: bigint
   /** Rent the landlord couldn't receive yet; claimable. */
   landlordOwed: bigint
@@ -85,6 +87,12 @@ export const feeFor = (reserveUnits: bigint, lend = false) => {
   const fee = (reserveUnits * BigInt(ids.feeBps)) / 10_000n
   if (!lend) return fee
   return fee > LEND_DISCOUNT ? fee - LEND_DISCOUNT : 0n
+}
+
+/** What opting into lending takes off this lease's fee: the flat discount, but never more than the fee. */
+export const lendSaving = (rentDollars: number, months: number) => {
+  const units = toUnits(rentDollars * months)
+  return feeFor(units) - feeFor(units, true)
 }
 
 /** The fee agreed on this lease. The contract zeroes it only on a full refund, and lending can be switched off later. */
