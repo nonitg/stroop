@@ -75,6 +75,16 @@ function familyActions(lease: Lease, kp: Keypair, now: number): Action[] {
       })
   }
 
+  if (lease.lend && ['Funded', 'Accepted', 'Active', 'Disputed'].includes(lease.status))
+    actions.push({
+      id: 'stop-lending',
+      label: 'Stop lending',
+      done: 'Lending stopped',
+      doneBody: 'All your rent is back in the lease.',
+      tier: 'quiet',
+      run: () => reserve.setLending(kp, id, false),
+    })
+
   if (lease.status === 'Active')
     actions.push({
       id: 'dispute',

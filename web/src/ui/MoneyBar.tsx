@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-export type Tone = 'paid' | 'locked' | 'back' | 'fee' | 'partner' | 'empty'
+export type Tone = 'paid' | 'locked' | 'lent' | 'back' | 'fee' | 'partner' | 'empty'
 
 export interface Slice {
   tone: Tone

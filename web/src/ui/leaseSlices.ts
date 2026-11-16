@@ -1,4 +1,4 @@
-import { type Lease, type Role, fmtUSD, fromUnits } from '../stellar'
+import { CASH_MONTHS, type Lease, type Role, fmtUSD, fromUnits } from '../stellar'
 import { moneyTrail } from '../leaseText'
 import type { Slice } from './MoneyBar'
 
@@ -10,10 +10,17 @@ export function leaseSlices(l: Lease, role: Role): Slice[] {
     { tone: 'paid', value: fromUnits(t.paid), label: family ? 'Paid to landlord' : 'Paid to you', amount: fmtUSD(t.paid) },
     {
       tone: 'locked',
-      value: fromUnits(t.locked),
-      label: 'Locked',
-      who: 'Paid out monthly',
-      amount: fmtUSD(t.locked),
+      value: fromUnits(t.locked - t.lent),
+      label: t.lent > 0n ? 'Locked, ready' : 'Locked',
+      who: t.lent > 0n ? `Next ${CASH_MONTHS} months` : 'Paid out monthly',
+      amount: fmtUSD(t.locked - t.lent),
+    },
+    {
+      tone: 'lent',
+      value: fromUnits(t.lent),
+      label: 'Locked, lent out',
+      who: 'Back before it’s due. Losses paid by Stroop’s fund',
+      amount: fmtUSD(t.lent),
     },
     { tone: 'back', value: fromUnits(t.returned), label: family ? 'Back to you' : 'Back to family', amount: fmtUSD(t.returned) },
   ]

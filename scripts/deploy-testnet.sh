@@ -32,8 +32,18 @@ fi
 # The treasury needs a USDC trustline to receive fees.
 stellar tx new change-trust --line "USDC:$ISSUER" --source rp-admin --network $NET >/dev/null 2>&1 || true
 FEE_BPS=${FEE_BPS:-50}
+# Leases that opt into lending get a flat US$50 off; Stroop keeps the vault's earnings.
+LEND_DISCOUNT=500000000
+# Testnet stand-in for the Blend USDC pool adapter.
+VAULT=$(stellar contract deploy --wasm target/wasm32v1-none/release/demo_vault.wasm \
+  --source rp-admin --network $NET -- --token "$SAC" --admin "$ADMIN")
 RESERVE=$(stellar contract deploy --wasm target/wasm32v1-none/release/rent_reserve.wasm \
-  --source rp-admin --network $NET -- --token "$SAC" --treasury "$ADMIN" --fee_bps $FEE_BPS)
+  --source rp-admin --network $NET -- --token "$SAC" --treasury "$ADMIN" --fee_bps $FEE_BPS \
+  --lend_discount $LEND_DISCOUNT --vault "$VAULT")
+
+# Seed the cover fund with test USDC from the faucet (20,000 backs up to 200,000 of lent rent).
+stellar contract invoke --id "$FAUCET" --source rp-admin --network $NET -- drip --to "$ADMIN" >/dev/null
+stellar contract invoke --id "$RESERVE" --source rp-admin --network $NET -- add_cover --from "$ADMIN" --amount 200000000000 >/dev/null
 
 cat > web/src/contracts.json <<JSON
 {
@@ -44,6 +54,8 @@ cat > web/src/contracts.json <<JSON
   "faucet": "$FAUCET",
   "treasury": "$ADMIN",
   "feeBps": $FEE_BPS,
+  "lendDiscount": $LEND_DISCOUNT,
+  "vault": "$VAULT",
   "mediator": "$ADMIN"
 }
 JSON

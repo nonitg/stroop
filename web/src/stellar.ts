@@ -57,10 +57,46 @@ export interface Lease {
   status: StatusName
   endProposedBy?: string
   endProposedAt: number
+  /** Payer opted into lending rent due after the next `CASH_MONTHS`. */
+  lend: boolean
+  /** Part of `held` lent out right now. */
+  lent: bigint
+  /** Lending shortfall Stroop's cover fund has paid into this lease. */
+  covered: bigint
+}
+
+/** Rent for the next this-many months always stays in the lease, never lent (contract rule). */
+export const CASH_MONTHS = 3
+/** Leases need this many months to opt into lending (contract rule). */
+export const MIN_LEND_MONTHS = 9
+/** Flat amount off the fee for leases that opt into lending. */
+export const LEND_DISCOUNT = BigInt(ids.lendDiscount)
+/** Rough yearly rate Blend's main USDC pool paid in Nov 2026; only used to show Stroop's likely cut. */
+const LEND_RATE_ESTIMATE = 0.06
+
+/** What Stroop can expect to earn lending this lease, in dollars, if it runs its full term. */
+export function lendEarningsEstimate(rentDollars: number, months: number) {
+  // Each month, rent due more than CASH_MONTHS out is lent: months-2 down to 1 after move-in.
+  const lentMonths = Array.from({ length: months }, (_, i) => Math.max(0, months - 1 - i - CASH_MONTHS))
+  const monthDollars = lentMonths.reduce((a, b) => a + b, 0) * rentDollars
+  return (monthDollars * LEND_RATE_ESTIMATE) / 12
 }
 
 /** Service fee the contract adds on top of the reserve (charged only at move-in). */
-export const feeFor = (reserveUnits: bigint) => (reserveUnits * BigInt(ids.feeBps)) / 10_000n
+export const feeFor = (reserveUnits: bigint, lend = false) => {
+  const fee = (reserveUnits * BigInt(ids.feeBps)) / 10_000n
+  if (!lend) return fee
+  return fee > LEND_DISCOUNT ? fee - LEND_DISCOUNT : 0n
+}
+
+/** What opting into lending takes off this lease's fee: the flat discount, but never more than the fee. */
+export const lendSaving = (rentDollars: number, months: number) => {
+  const units = toUnits(rentDollars * months)
+  return feeFor(units) - feeFor(units, true)
+}
+
+/** The fee agreed on this lease. The contract zeroes it only on a full refund, and lending can be switched off later. */
+export const leaseFee = (l: Lease) => (l.fee > 0n ? l.fee : feeFor(l.rent * BigInt(l.periods), l.lend))
 
 const horizon = new Horizon.Server(NET.horizonUrl)
 
@@ -197,6 +233,7 @@ const ERRORS: Record<number, string> = {
   9: 'Invalid amount.',
   10: 'The landlord has marked the keys as handed over, so the reserve can no longer be reclaimed. Raise a dispute instead.',
   11: 'Only the side that proposed ending early can withdraw the proposal.',
+  12: 'Stroop’s cover fund can’t go lower while rent is lent out.',
 }
 
 export function explainError(e: unknown): string {
@@ -221,7 +258,7 @@ async function send<T>(kp: Keypair, method: string, args: Record<string, unknown
 }
 
 export const reserve = {
-  create: (kp: Keypair, landlord: string, mediator: string, rentDollars: number, months: number) =>
+  create: (kp: Keypair, landlord: string, mediator: string, rentDollars: number, months: number, lend: boolean) =>
     send<bigint>(kp, 'create', {
       payer: kp.publicKey(),
       landlord,
@@ -230,6 +267,7 @@ export const reserve = {
       periods: months,
       period_secs: BigInt(DEMO_PERIOD_SECS),
       move_in_window_secs: BigInt(DEMO_MOVE_IN_WINDOW_SECS),
+      lend,
     }),
   accept: (kp: Keypair, id: number) => send<void>(kp, 'accept', { id: BigInt(id) }),
   moveIn: (kp: Keypair, id: number) => send<void>(kp, 'move_in', { id: BigInt(id) }),
@@ -240,6 +278,27 @@ export const reserve = {
   handOver: (kp: Keypair, id: number) => send<void>(kp, 'hand_over', { id: BigInt(id) }),
   dispute: (kp: Keypair, id: number) => send<void>(kp, 'dispute', { id: BigInt(id), caller: kp.publicKey() }),
   claim: (kp: Keypair, id: number) => send<bigint>(kp, 'claim', { id: BigInt(id) }),
+  setLending: (kp: Keypair, id: number, on: boolean) => send<void>(kp, 'set_lending', { id: BigInt(id), on }),
+}
+
+/** Stroop's cover fund and the rent it backs, straight from the contract. */
+export async function coverStatus(): Promise<{ cover: bigint; lent: bigint }> {
+  const client = await reserveClient(null)
+  const [cover, lent] = (await client.cover_status()).result as [bigint, bigint]
+  return { cover: BigInt(cover), lent: BigInt(lent) }
+}
+
+/** Testnet demo: the stand-in lending pool loses `bps` of what it holds. */
+export async function simulatePoolLoss(kp: Keypair, bps: number) {
+  const client: any = await contract.Client.from({
+    contractId: ids.vault,
+    networkPassphrase: NET.passphrase,
+    rpcUrl: NET.rpcUrl,
+    publicKey: kp.publicKey(),
+    ...contract.basicNodeSigner(kp, NET.passphrase),
+  })
+  const sent = await (await client.simulate_loss({ bps: BigInt(bps) })).signAndSend()
+  return { hash: sent.sendTransactionResponse?.hash as string | undefined }
 }
 
 export async function getLease(id: number): Promise<Lease> {
@@ -266,6 +325,9 @@ export async function getLease(id: number): Promise<Lease> {
     status: STATUS[Number(raw.status)] ?? 'Funded',
     endProposedBy: raw.end_proposed_by ?? undefined,
     endProposedAt: Number(raw.end_proposed_at),
+    lend: Boolean(raw.lend),
+    lent: BigInt(raw.lent ?? 0),
+    covered: BigInt(raw.covered ?? 0),
   }
 }
 
