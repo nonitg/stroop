@@ -74,9 +74,40 @@ export function useRole() {
   return [role, setRole] as const
 }
 
+const POLL_MS = 8000
+
+/** Runs `load` now and every few seconds while the page is visible, and right away when it comes back. */
+export function usePoll(load: () => unknown, ms = POLL_MS) {
+  useEffect(() => {
+    load()
+    const t = setInterval(() => document.hidden || load(), ms)
+    const back = () => document.hidden || load()
+    document.addEventListener('visibilitychange', back)
+    return () => {
+      clearInterval(t)
+      document.removeEventListener('visibilitychange', back)
+    }
+  }, [load, ms])
+}
+
+const key = (v: unknown) => JSON.stringify(v, (_, x) => (typeof x === 'bigint' ? x.toString() : x))
+
+/** Like useState, but a poll that returns the same data keeps the old value, so nothing re-renders. */
+function useSteadyState<T>(initial: T) {
+  const [value, setValue] = useState(initial)
+  const last = useRef(key(initial))
+  const set = useCallback((next: T) => {
+    const k = key(next)
+    if (k === last.current) return
+    last.current = k
+    setValue(next)
+  }, [])
+  return [value, set] as const
+}
+
 /** One lease, read live from Stellar and refreshed every few seconds. */
 export function useLease(id: number) {
-  const [lease, setLease] = useState<Lease | null>(null)
+  const [lease, setLease] = useSteadyState<Lease | null>(null)
   const [error, setError] = useState<string | null>(null)
   const load = useCallback(
     () =>
@@ -86,13 +117,9 @@ export function useLease(id: number) {
           setError(null)
         })
         .catch((e) => setError(explainError(e))),
-    [id],
+    [id, setLease],
   )
-  useEffect(() => {
-    load()
-    const t = setInterval(load, 8000)
-    return () => clearInterval(t)
-  }, [load])
+  usePoll(load)
   return { lease, error, reload: load }
 }
 
@@ -146,7 +173,7 @@ export function useNow(intervalMs = 1000) {
 
 export function useWallet(role: Role) {
   const [kp, setKp] = useState<Keypair | null>(() => getKeypair(role))
-  const [balances, setBalances] = useState<{ xlm: number; usdc: number } | null>(null)
+  const [balances, setBalances] = useSteadyState<{ xlm: number; usdc: number } | null>(null)
   // False until the first balance lookup finishes, so a returning user sees a loading state, not onboarding.
   const [checked, setChecked] = useState(!kp)
   const [step, setStep] = useState<string | null>(null)
@@ -156,14 +183,10 @@ export function useWallet(role: Role) {
     if (!kp) return
     setBalances(await getBalances(kp.publicKey()))
     setChecked(true)
-  }, [kp])
+  }, [kp, setBalances])
 
-  useEffect(() => {
-    refresh()
-    // Money can arrive without this person acting (move-in, monthly payouts), so keep the balance live.
-    const t = setInterval(refresh, 8000)
-    return () => clearInterval(t)
-  }, [refresh])
+  // Money can arrive without this person acting (move-in, monthly payouts), so keep the balance live.
+  usePoll(refresh)
 
   const setup = async () => {
     setError(null)
@@ -189,7 +212,7 @@ export function useWallet(role: Role) {
 export type Wallet = ReturnType<typeof useWallet>
 
 export function useLeases(pub: string | undefined) {
-  const [leases, setLeases] = useState<Lease[] | null>(null)
+  const [leases, setLeases] = useSteadyState<Lease[] | null>(null)
   const load = useCallback(async () => {
     if (!pub) return
     try {
@@ -197,12 +220,8 @@ export function useLeases(pub: string | undefined) {
     } catch {
       /* transient RPC errors: keep the last good list */
     }
-  }, [pub])
-  useEffect(() => {
-    load()
-    const t = setInterval(load, 8000)
-    return () => clearInterval(t)
-  }, [load])
+  }, [pub, setLeases])
+  usePoll(load)
   return { leases, reload: load }
 }
 

@@ -24,6 +24,7 @@ import { useToast } from '../components/useToast'
 import { hushNews } from '../news'
 import { Ledger, MoneyBar, type Slice } from '../ui/MoneyBar'
 import { Sheet } from '../ui/Sheet'
+import { StickyCta } from '../ui/StickyCta'
 import { CurrencySheet } from '../ui/CurrencySheet'
 import { LendingSheet } from '../ui/LendingSheet'
 import { useShare } from '../ui/share'
@@ -164,11 +165,11 @@ export function NewLease({ to }: { to?: string }) {
             </button>
           )}
           {error && <Problem text={error} />}
-          <div className="footer-cta">
+          <StickyCta>
             <button className="btn primary wide" disabled={!landlordOk} onClick={() => setStep(1)}>
               Continue
             </button>
-          </div>
+          </StickyCta>
         </>
       )}
 
@@ -224,11 +225,11 @@ export function NewLease({ to }: { to?: string }) {
               </button>
             </span>
           </div>
-          <div className="footer-cta">
+          <StickyCta>
             <button className="btn primary wide" disabled={rentNum <= 0} onClick={() => setStep(2)}>
               Continue
             </button>
-          </div>
+          </StickyCta>
         </>
       )}
 
@@ -245,7 +246,7 @@ export function NewLease({ to }: { to?: string }) {
           onCurrency={() => setSheet('currency')}
         >
           {error && <Problem text={error} />}
-          <div className="footer-cta">
+          <StickyCta>
             {enough ? (
               <button className="btn primary wide" onClick={lock} disabled={!!busy} aria-busy={busy === 'lock'}>
                 {busy === 'lock' ? (
@@ -263,7 +264,7 @@ export function NewLease({ to }: { to?: string }) {
             <p className="fine" style={{ marginTop: 8 }}>
               {fmtUSD(rentTotal)} for your landlord + {fmtUSD(fee)} Stroop fee · testnet uses your test balance
             </p>
-          </div>
+          </StickyCta>
         </Review>
       )}
 
