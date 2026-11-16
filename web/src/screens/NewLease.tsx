@@ -259,7 +259,7 @@ export function NewLease({ to }: { to?: string }) {
               </button>
             ) : (
               <button className="btn primary wide" onClick={() => setSheet('add')}>
-                <Plus size={18} aria-hidden /> Add {fmtMoney(onRampQuote(shortfall, code).pay, code)} from your bank
+                <Plus size={18} aria-hidden /> Add money from your bank
               </button>
             )}
             <p className="fine" style={{ marginTop: 8 }}>

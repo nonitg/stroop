@@ -311,7 +311,10 @@ export function CashOutSheet(props: {
       )}
       <div className="big-total">
         <span className="label">Lands in your bank</span>
-        <span className="amount md num">≈ {fmtMoney(q.receive, dest, { cents: !foreign })}</span>
+        <span className="amount md num">
+          {foreign && '≈ '}
+          {fmtMoney(q.receive, dest, { cents: !foreign })}
+        </span>
       </div>
       <dl className="facts glass strong" style={{ borderRadius: 20, marginTop: 10 }}>
         <div>

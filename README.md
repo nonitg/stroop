@@ -6,7 +6,7 @@ Newcomers to Canada have the money to pay rent, but no local credit history, so 
 
 First customer: international students (about 690,000 study-permit holders in Canada), whose families fund rent from abroad.
 
-- **Live app:** _[[add Vercel URL]]_
+- **Live app:** https://stroop-two.vercel.app
 - **Demo video (1 min):** _[[add YouTube/Loom link]]_
 - **Network:** Stellar Testnet
 
@@ -14,22 +14,23 @@ First customer: international students (about 690,000 study-permit holders in Ca
 
 | Contract | ID |
 | --- | --- |
-| Rent reserve (Soroban) | [`CAC6PNPORQRORWN2BCUM7WAK3UR647J7KF76GITYDP5PUUQEHV46YKL7`](https://stellar.expert/explorer/testnet/contract/CAC6PNPORQRORWN2BCUM7WAK3UR647J7KF76GITYDP5PUUQEHV46YKL7) |
-| Test USDC (Stellar Asset Contract) | [`CBPPI4PD6JOCLHDKRQ4ROBL5Z2YRIATOG4A5K6MPLUERBUXPQHXHU5OD`](https://stellar.expert/explorer/testnet/contract/CBPPI4PD6JOCLHDKRQ4ROBL5Z2YRIATOG4A5K6MPLUERBUXPQHXHU5OD) |
-| Test USDC faucet (SAC admin) | [`CCYT3OCJ4N5TJSXULBW5HBHDNJSJ6NNXRVEPSBO72DEA6E3YU4LB5BYH`](https://stellar.expert/explorer/testnet/contract/CCYT3OCJ4N5TJSXULBW5HBHDNJSJ6NNXRVEPSBO72DEA6E3YU4LB5BYH) |
+| Rent reserve (Soroban) | [`CCME2Z25L2S7K54DUP3WXRH7XL2UWUEUFFYWPSGNK7NZYHGEIVBUWUYA`](https://stellar.expert/explorer/testnet/contract/CCME2Z25L2S7K54DUP3WXRH7XL2UWUEUFFYWPSGNK7NZYHGEIVBUWUYA) |
+| Test CAD stablecoin (Stellar Asset Contract) | [`CBFP3QURFNYWVQEXMJROYW6JCNMJCJFP5D4ZCISACG5YNT54DA2V5TTO`](https://stellar.expert/explorer/testnet/contract/CBFP3QURFNYWVQEXMJROYW6JCNMJCJFP5D4ZCISACG5YNT54DA2V5TTO) |
+| Test CAD faucet (SAC admin) | [`CCBQX2YHW2DPEREASZNI6JS4KMT2OPHZMZJ5IEQ6YGE4CA5YPY5JN67Y`](https://stellar.expert/explorer/testnet/contract/CCBQX2YHW2DPEREASZNI6JS4KMT2OPHZMZJ5IEQ6YGE4CA5YPY5JN67Y) |
 
-The test USDC is a classic Stellar asset (`USDC:GDLAVU5VJNJJFAL7TDMPYASQ6SFTENCCUNZBCQU6MC62PJ3CF3E2MDFV`) issued by us for the demo. It has no value, and anyone can mint it from the faucet. The rent contract's token is fixed at deployment (so a lease can't be "funded" with a look-alike token); on mainnet it is deployed with Circle's USDC.
+Leases are priced and held in Canadian dollars, so the landlord's rent never moves with exchange rates. The test CAD is a classic Stellar asset (`CAD:GDLAVU5VJNJJFAL7TDMPYASQ6SFTENCCUNZBCQU6MC62PJ3CF3E2MDFV`) issued by us for the demo. It has no value, and anyone can mint it from the faucet. It stands in for a regulated CAD stablecoin (for example QCAD from Stablecorp). The rent contract's token is fixed at deployment, so a lease can't be "funded" with a look-alike token, and switching stablecoins is a redeploy, not a code change (`CODE=USDC ./scripts/deploy-testnet.sh` deploys a USDC version).
 
 ## Try it in 2 minutes
 
 No wallet extension needed; everything runs on Testnet with play money.
 
-1. Open the app → **Student & family** → *Create demo account* (gets 20,000 test USDC).
-2. *Use a demo landlord* → *Lock* (12 × $1,000 rent + a 0.5% fee, charged only after move-in; shown in your own currency).
-3. **Landlord** tab → open the lease's proof page (what a landlord sees from the tenant's link) → *Accept lease*.
-4. **Student & family** → *Confirm move-in*: month 1 is paid and the fee is collected.
-5. **Landlord** → *Try to withdraw early*: **blocked by the contract**. Wait a minute (demo clock: 1 month = 1 minute) → *Collect rent*.
-6. Optional: *Mark keys handed over* / *Raise a dispute* / *Propose ending lease early* / *Cash out* (real SEP-10 + SEP-24 on SDF's test anchor).
+1. Open the app → **I'm renting** → *Create account* (no money yet).
+2. *Start* → *Use a demo landlord* → C$1,000 × 12 months → *Add money from your bank*: see the quote in your currency (rate held 10 min, partner fee shown), follow the demo partner's transfer instructions, watch it arrive as C$.
+3. *Lock C$12,060* (12 × C$1,000 rent + a 0.5% fee, charged only after move-in).
+4. **Landlord** tab → open the lease's proof page (what a landlord sees from the tenant's link) → *Accept lease*.
+5. **Renter** → *Confirm move-in*: month 1 is paid and the fee is collected.
+6. **Landlord** → *Try to withdraw early*: **blocked by the contract**. Wait a minute (demo clock: 1 month = 1 minute) → *Collect rent*.
+7. Optional: *Mark keys handed over* / *Raise a dispute* / *Propose ending lease early* / *Cash out* (real SEP-10 + SEP-24 on SDF's test anchor).
 
 Every action links to its transaction on Stellar Expert.
 
@@ -37,7 +38,7 @@ Every action links to its transaction on Stellar Expert.
 
 ```
 Family (abroad)                 Rent reserve contract                 Landlord (Canada)
-     │  create(): lock rent × months ──►  held: 12,000 USDC
+     │  create(): lock rent × months ──►  held: C$12,000
      │                                    │ ◄── accept(): landlord commits
      │  move_in(): "I have the keys" ───► │ ──► month 1 paid
      │                                    │ ──► release(): one month per period, never early
@@ -70,16 +71,28 @@ There is no admin withdrawal path. The operator can't touch a lease's funds; the
 - **Off-chain:** the web app (static React; reads and writes through Stellar RPC and Horizon), the landlord's KYC and bank payout (anchor via SEP-10/SEP-24), and a keeper (`web/scripts/keeper.ts`) that calls `release` when rent comes due. It holds no special rights: the contract decides who gets paid and when.
 - **Demo clock:** one rent month = 60 seconds, so a full lease fits in a demo. Production uses 30-day periods.
 
+## Money in and out
+
+| | How | Time | Rate |
+| --- | --- | --- | --- |
+| Family adds money from a Canadian bank | Interac e-Transfer to a licensed partner, then C$ stablecoin to the wallet | Minutes | None, C$ to C$ |
+| Family adds money from abroad | International transfer to a partner, converted once to C$ | 1–3 business days | Partner's quote, fixed when they add money |
+| Landlord cashes out | C$ stablecoin to a Canadian bank (one-time ID check via SEP-24) | Minutes (Interac) to 1–2 days | None, C$ to C$; Stroop pays the cash-out fee |
+| Family takes a refund home | C$ to a Canadian bank, or to their home bank | Minutes, or 1–3 days | That day's rate |
+
+The money moves into the contract; it is never a bank hold. A hold can be released by the account owner or their bank and lapses within weeks, so it can't prove anything to a landlord for 12 months.
+
 ## What's real and what's simulated
 
 | Piece | Status |
 | --- | --- |
-| Rent reserve contract, all rules above | Real, deployed on Testnet, 16 unit tests + scripted end-to-end run |
-| USDC movement | Real Testnet transfers of our test USDC through its Stellar Asset Contract |
+| Rent reserve contract, all rules above | Real, deployed on Testnet, 23 unit tests + scripted end-to-end run |
+| Stablecoin movement | Real Testnet transfers of our test CAD through its Stellar Asset Contract |
+| Adding money (on-ramp) | Simulated partner: real quote math and flow, then the faucet mints the exact C$ the transfer would buy. Production: SEP-24 deposit through a licensed partner |
 | Landlord verification page | Real, reads contract state live |
 | Anchor cash-out | SEP-1/SEP-10/SEP-24 calls are real, against SDF's reference anchor (`testanchor.stellar.org`); no money moves on Testnet |
 | Wallets | Demo keypairs generated in the browser and funded by Friendbot. Production: passkey smart wallets and sponsored fees |
-| CAD payout | Not built. Production needs a licensed Canadian off-ramp |
+| C$ to a bank | Not live. Production needs a licensed Canadian off-ramp |
 
 ## Run it
 
@@ -127,7 +140,7 @@ cd web && bun scripts/keeper.ts 10
 
 ```
 contracts/rent_reserve   Soroban rent reserve (Rust) + tests
-contracts/demo_faucet    Testnet-only faucet, admin of the test USDC asset
+contracts/demo_faucet    Testnet-only faucet, admin of the test stablecoin
 scripts/                 Deploy and end-to-end smoke test
 web/                     React app (Vite + @stellar/stellar-sdk)
 ```
