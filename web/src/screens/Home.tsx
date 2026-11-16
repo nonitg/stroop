@@ -72,7 +72,7 @@ export function FamilyHome() {
           </p>
         </section>
       )}
-      {top && <LeaseHero lease={top} role="family" me={me} home={code} />}
+      {top && <LeaseHero lease={top} role="family" me={me} />}
       {top && (
         <>
           <div className="quick">

@@ -35,7 +35,7 @@ import {
 } from '../stellar'
 import { useHomeCurrency, useLease, useNow, verifyLink } from '../hooks'
 import { fmtDate, fmtDuration, headline } from '../leaseText'
-import { currency, fmtMoney, landlordPayout, offRampQuote, perCad } from '../money'
+import { fmtMoney, landlordPayout, offRampQuote } from '../money'
 import { mediatorName } from '../mediators'
 import { type Action, leaseActions } from '../components/leaseActions'
 import { useToast } from '../components/useToast'
@@ -113,7 +113,6 @@ function LeaseDetail({ lease, role, onChange }: { lease: Lease; role: Role; onCh
   const now = useNow()
   const toast = useToast()
   const share = useShare()
-  const [code] = useHomeCurrency()
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [confirm, setConfirm] = useState<Action | null>(null)
@@ -131,7 +130,6 @@ function LeaseDetail({ lease, role, onChange }: { lease: Lease; role: Role; onCh
   const total = slices.reduce((s, x) => s + x.value, 0)
   const txs = txsFor(lease.id)
   const proof = () => share(verifyLink(lease.id), 'Proof link', 'Send it to your landlord.')
-  const home = currency(code)
 
   const run = async (a: Action) => {
     setConfirm(null)
@@ -178,7 +176,6 @@ function LeaseDetail({ lease, role, onChange }: { lease: Lease; role: Role; onCh
             <span className="label">{family ? 'Locked' : 'Locked for you'}</span>
             <Amount units={lease.held} />
             <span className="approx">
-              {family && home.code !== 'CAD' && `≈ ${fmtMoney((Number(lease.held) / 1e7) * perCad(home.code), home.code)} · `}
               {fmtCAD(lease.rent)} a month · {lease.periods} months
             </span>
             <div className="hero-foot">

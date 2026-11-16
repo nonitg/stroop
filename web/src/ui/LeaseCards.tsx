@@ -2,7 +2,6 @@ import { Check, ChevronRight, KeyRound, LockKeyhole, Pause, Undo2 } from 'lucide
 import { type Lease, type Role, fmtCAD } from '../stellar'
 import { useNow } from '../hooks'
 import { headline } from '../leaseText'
-import { fmtMoney, perCad } from '../money'
 import { Amount } from './Amount'
 import { KeyRow, MoneyBar } from './MoneyBar'
 import { Status } from './Status'
@@ -13,18 +12,14 @@ export function LeaseHero({
   lease,
   role,
   me,
-  home,
 }: {
   lease: Lease
   role: Role
   me: string
-  /** The renter's home currency, for a rough local figure. */
-  home?: string
 }) {
   const now = useNow()
   const h = headline(lease, role, me, now)
   const slices = leaseSlices(lease, role)
-  const held = Number(lease.held) / 1e7
   return (
     <a className="hero-card glass syrup card" href={`#/lease/${lease.id}`}>
       <div className="head">
@@ -33,7 +28,6 @@ export function LeaseHero({
       </div>
       <Amount units={lease.held} />
       <span className="approx">
-        {home && home !== 'CAD' ? `≈ ${fmtMoney(held * perCad(home), home)} · ` : ''}
         {fmtCAD(lease.rent)} a month
       </span>
       <MoneyBar slices={slices} thin />

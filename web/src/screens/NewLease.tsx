@@ -85,7 +85,7 @@ export function NewLease({ to }: { to?: string }) {
       if (hash) logTx({ leaseId: id, label: 'Rent locked', hash, at: Date.now() })
       toast({
         title: 'Rent locked',
-        body: `${fmtCAD(lockUnits)} is held for lease ${id}.`,
+        body: `${fmtCAD(rentTotal)} for your landlord + ${fmtCAD(fee)} Stroop fee.`,
         hash,
         secs: (performance.now() - t0) / 1000,
       })
@@ -264,7 +264,7 @@ export function NewLease({ to }: { to?: string }) {
             )}
             <p className="fine" style={{ marginTop: 8 }}>
               {enough
-                ? `${fmtCAD(rentTotal)} for your landlord + ${fmtCAD(fee)} Stroop fee, from your C$ balance`
+                ? `${fmtCAD(rentTotal)} for your landlord + ${fmtCAD(fee)} Stroop fee · network fee ≈ ${fmtMoney(LOCK_FEE_XLM * XLM_CAD, 'CAD', { cents: true })} in XLM`
                 : balance > 0
                   ? `You have ${fmtMoney(balance, 'CAD', { cents: true })}. Add the rest, then lock.`
                   : 'Step 1: add money. Step 2: lock it.'}
@@ -298,6 +298,7 @@ export function NewLease({ to }: { to?: string }) {
         kp={kp}
         code={code}
         cad={shortfall}
+        note={balance > 0 ? undefined : `${fmtCAD(rentTotal)} rent + ${fmtCAD(fee)} Stroop fee`}
         onAdded={wallet.refresh}
       />
     </main>
@@ -308,11 +309,11 @@ export function NewLease({ to }: { to?: string }) {
 function quoteLease(rent: number, months: number, code: string, lend: boolean) {
   const cadRent = rent * months
   const cadFee = fromUnits(feeFor(toUnits(cadRent), lend))
-  const cadNet = LOCK_FEE_XLM * XLM_CAD
   const q = onRampQuote(cadRent + cadFee, code)
   const rate = q.rate
   const local = (n: number) => fmtMoney(n, code)
-  const pay = q.pay + cadNet * rate
+  // Stellar's network fee is paid in XLM from the account, not from the bank, so it isn't in this total.
+  const pay = q.pay
   const slices: Slice[] = [
     {
       tone: 'locked',
@@ -325,7 +326,7 @@ function quoteLease(rent: number, months: number, code: string, lend: boolean) {
       tone: 'fee',
       value: cadFee * rate,
       label: lend ? `Stroop fee · ${FEE_PCT} − ${fmtCAD(LEND_DISCOUNT)}` : `Stroop fee · ${FEE_PCT}`,
-      who: 'Only if you move in',
+      who: 'Back to you if you don’t move in',
       amount: local(cadFee * rate),
     },
   ]
@@ -337,13 +338,6 @@ function quoteLease(rent: number, months: number, code: string, lend: boolean) {
       who: 'Exchange partner, not Stroop',
       amount: local(q.fee),
     })
-  slices.push({
-    tone: 'partner',
-    value: cadNet * rate,
-    label: 'Network fee',
-    who: 'Stellar',
-    amount: fmtMoney(cadNet * rate, code, { cents: cadNet * rate < 1 }),
-  })
   return { slices, pay, rate, ofHundred: Math.floor(((cadRent * rate) / pay) * 100) }
 }
 

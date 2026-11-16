@@ -45,6 +45,8 @@ export function AddMoneySheet(props: {
   code: string
   /** C$ needed, when a lease asks for an exact amount. */
   cad?: number
+  /** What that amount is for, e.g. rent + fee. */
+  note?: string
   onAdded: () => Promise<unknown>
 }) {
   const { open, onClose, kp, code, onAdded } = props
@@ -120,13 +122,13 @@ export function AddMoneySheet(props: {
                 <dt>Rate</dt>
                 <dd>
                   C$1 = {fmtMoney(q.rate, code, { cents: q.rate < 100 })}
-                  <small>Held for {clock(left)}</small>
+                  <small>Rate held for {clock(left)}</small>
                 </dd>
               </div>
             )}
             {foreign && (
               <div>
-                <dt>Exchange fee, est. {pct(FX_FEE)}</dt>
+                <dt>Exchange fee · {pct(FX_FEE)}</dt>
                 <dd>
                   {fmtMoney(q.fee, code)}
                   <small>Kept by the exchange partner</small>
@@ -137,7 +139,7 @@ export function AddMoneySheet(props: {
               <dt>You get</dt>
               <dd>
                 {fmtMoney(cad, 'CAD', { cents: cad % 1 !== 0 })}
-                <small>{foreign ? 'Fixed now. Rent never moves with the rate.' : 'C$ in, C$ out. No exchange.'}</small>
+                <small>{props.note ?? (foreign ? 'Fixed now. Rent never moves with the rate.' : 'C$ in, C$ out. No exchange.')}</small>
               </dd>
             </div>
             <div>
@@ -153,6 +155,7 @@ export function AddMoneySheet(props: {
               Continue
             </button>
           </div>
+          <p className="help">Demo: sample rates, test money only.</p>
         </>
       )}
 
@@ -330,19 +333,23 @@ export function CashOutSheet(props: {
             </dd>
           </div>
         )}
-        <div>
-          <dt>
-            {foreign ? 'Exchange fee' : 'Cash-out fee'}, est. {pct(foreign ? FX_FEE : CASH_OUT_FEE)}
-          </dt>
-          <dd>
-            −{fmtMoney(q.fee, dest, { cents: !foreign })}
-            <small>Kept by the cash-out partner</small>
-          </dd>
-        </div>
-        {covered && (
+        {covered ? (
           <div className="good-row">
-            <dt>Paid back by Stroop</dt>
-            <dd>+{fmtMoney(q.rebate, dest, { cents: true })}</dd>
+            <dt>Cash-out fee</dt>
+            <dd>
+              {fmtMoney(0, dest, { cents: true })}
+              <small>Stroop pays the partner’s {pct(CASH_OUT_FEE)}</small>
+            </dd>
+          </div>
+        ) : (
+          <div>
+            <dt>
+              {foreign ? 'Exchange fee' : 'Cash-out fee'} · {pct(foreign ? FX_FEE : CASH_OUT_FEE)}
+            </dt>
+            <dd>
+              −{fmtMoney(q.fee, dest, { cents: !foreign })}
+              <small>Kept by the cash-out partner</small>
+            </dd>
           </div>
         )}
         <div>
@@ -378,8 +385,8 @@ export function CashOutSheet(props: {
       )}
       {phase === 'error' && <Problem text={error} />}
       <p className="help">
-        You confirm your ID and bank once; after that, cash-outs go straight through. Testnet: the sign-in and bank
-        form are real, on Stellar’s test partner. No money moves.
+        You confirm your ID and bank once; after that, cash-outs go straight through. Demo: no real money moves.
+        You’ll see Stellar’s test partner form.
       </p>
       {(phase === 'idle' || phase === 'error') && (
         <div className="actions">
