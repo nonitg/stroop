@@ -340,9 +340,24 @@ export async function recentLeases(limit = 40): Promise<Lease[]> {
   return leases.filter((l): l is Lease => !!l)
 }
 
+// A lease's payer and landlord never change, so other people's leases are read once, not every poll.
+// Keyed by account: one browser can hold both a renter and a landlord wallet.
+const othersLeases = new Map<string, Set<number>>()
+
 /** Leases where `pub` is the payer or landlord, newest first. */
 export async function leasesFor(pub: string): Promise<Lease[]> {
-  return (await recentLeases()).filter((l) => l.payer === pub || l.landlord === pub)
+  const client = await reserveClient(null)
+  const count = Number((await client.lease_count()).result)
+  const skip = othersLeases.get(pub) ?? new Set<number>()
+  othersLeases.set(pub, skip)
+  const ids = Array.from({ length: Math.min(count, 40) }, (_, i) => count - 1 - i).filter((id) => !skip.has(id))
+  const leases = await Promise.all(ids.map((id) => getLease(id).catch(() => null)))
+  return leases.filter((l): l is Lease => {
+    if (!l) return false
+    const mine = l.payer === pub || l.landlord === pub
+    if (!mine) skip.add(l.id)
+    return mine
+  })
 }
 
 // Mirrors the contract: time the student has to dispute after the keys are handed
