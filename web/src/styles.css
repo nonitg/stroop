@@ -188,6 +188,8 @@ a {
   max-width: 560px;
   margin: 0 auto;
   padding: calc(8px + var(--safe-t)) 16px calc(120px + var(--safe-b));
+}
+.vt .screen {
   view-transition-name: screen;
 }
 .screen.bare {
@@ -1495,12 +1497,25 @@ dialog.sheet::backdrop {
     margin-top: 2px;
   }
 }
-/* The sticky action fades the content behind it instead of overlapping text. */
+/* The sticky action blurs the content behind it instead of overlapping text. A blur (not a flat
+   colour) takes on whatever background is behind it, so no box edge shows on any screen or theme. */
 .footer-cta {
   bottom: 0;
   margin: 22px -16px 0;
   padding: 18px 16px calc(14px + var(--safe-b));
-  background: linear-gradient(to top, rgba(243, 238, 229, 0.96) 62%, rgba(243, 238, 229, 0));
+}
+.footer-cta > * {
+  position: relative;
+}
+.footer-cta::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  -webkit-mask-image: linear-gradient(to top, #000 55%, transparent);
+  mask-image: linear-gradient(to top, #000 55%, transparent);
 }
 /* Info rows (not tappable) can wrap: their text is the point. */
 div.row .txt span {

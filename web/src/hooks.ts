@@ -103,10 +103,14 @@ export const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion:
 /** Applies a state change as a cross-fade between screens where the browser supports it. */
 export function withTransition(update: () => void) {
   if (!document.startViewTransition || reducedMotion()) return update()
+  // The screen is named for the transition only while it runs: a permanent name stops the
+  // blur behind sticky buttons from seeing the content underneath.
+  const root = document.documentElement
+  root.classList.add('vt')
   const t = document.startViewTransition(() => flushSync(update))
   // A newer navigation can skip this one; that's expected, not an error.
   t.ready.catch(() => {})
-  t.finished.catch(() => {})
+  t.finished.catch(() => {}).finally(() => root.classList.remove('vt'))
 }
 
 /** Eases a displayed number toward `target`, so balances visibly move when money moves. */
