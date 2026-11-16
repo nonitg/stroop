@@ -1,7 +1,7 @@
 import { ArrowLeft, ArrowUpRight, BadgeCheck, LoaderCircle } from 'lucide-react'
 import { CASH_MONTHS, CONTRACTS, explorer, fmtCAD } from '../stellar'
 import { useLease, useNow } from '../hooks'
-import { fmtDate, headline } from '../leaseText'
+import { fmtDate, headline, isClosed, leaseFigure } from '../leaseText'
 import { mediatorName } from '../mediators'
 import { Amount } from '../ui/Amount'
 import { useCover } from '../ui/LendingSheet'
@@ -49,14 +49,19 @@ export function Proof({ id, back }: { id: number; back?: boolean }) {
     )
   // Public viewers see the landlord's side of the story: what's promised to them.
   const h = headline(lease, 'landlord', '', now)
+  const fig = leaseFigure(lease, 'public')
   return (
     <main className="screen bare">
       {top}
       <h1 className="page-title">Proof of rent</h1>
       <section className="glass card hero-card syrup">
-        <span className="label">Locked for the landlord · Lease {lease.id}</span>
-        <Amount units={lease.held} />
-        <span className="approx">Checked just now. Nobody can pay it out early.</span>
+        <span className="label">
+          {fig.label} · Lease {lease.id}
+        </span>
+        <Amount units={fig.units} />
+        <span className="approx">
+          {isClosed(lease) ? (fig.sub ?? 'Lease closed.') : 'Checked just now. Nobody can pay it out early.'}
+        </span>
         <MonthTiles lease={lease} now={now} />
         <div className="hero-foot">
           <Status {...h} sub={undefined} />

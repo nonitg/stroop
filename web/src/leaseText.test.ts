@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Lease } from './stellar'
-import { headline, moneyTrail } from './leaseText'
+import { headline, leaseFigure, monthsLeftText, moneyTrail } from './leaseText'
 import { parseRoute } from './hooks'
 
 const base: Lease = {
@@ -54,5 +54,15 @@ describe('moneyTrail', () => {
     expect(t.lent).toBe(8000_0000000n)
     expect(t.feeCharged).toBe(70_0000000n)
     expect(t.returned).toBe(0n)
+  })
+})
+
+describe('leaseFigure', () => {
+  it('shows what was paid and what came back once a lease ends early, the same for every viewer', () => {
+    // 2 × C$850, ended after month 1: C$850 paid, C$850 back, fee kept.
+    const ended: Lease = { ...base, rent: 850_0000000n, periods: 2, start: 100, paidPeriods: 1, held: 0n, fee: 8_5000000n, status: 'Ended' }
+    expect(leaseFigure(ended, 'family')).toEqual({ label: 'Paid to your landlord', units: 850_0000000n, sub: 'C$850 came back to you' })
+    expect(leaseFigure(ended, 'public').units).toBe(850_0000000n)
+    expect(monthsLeftText(ended)).toBe('1 returned')
   })
 })

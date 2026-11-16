@@ -1,7 +1,7 @@
 import { Check, ChevronRight, KeyRound, LockKeyhole, Pause, Undo2 } from 'lucide-react'
 import { type Lease, type Role, fmtCAD } from '../stellar'
 import { useNow } from '../hooks'
-import { headline } from '../leaseText'
+import { headline, isClosed, leaseFigure } from '../leaseText'
 import { Amount } from './Amount'
 import { KeyRow, MoneyBar } from './MoneyBar'
 import { Status } from './Status'
@@ -20,16 +20,15 @@ export function LeaseHero({
   const now = useNow()
   const h = headline(lease, role, me, now)
   const slices = leaseSlices(lease, role)
+  const fig = leaseFigure(lease, role)
   return (
     <a className="hero-card glass syrup card" href={`#/lease/${lease.id}`}>
       <div className="head">
-        <span className="label">{role === 'family' ? 'Locked for rent' : 'Locked for you'}</span>
+        <span className="label">{fig.label}</span>
         <span className="chip">Lease {lease.id}</span>
       </div>
-      <Amount units={lease.held} />
-      <span className="approx">
-        {fmtCAD(lease.rent)} a month
-      </span>
+      <Amount units={fig.units} />
+      <span className="approx">{fig.sub ?? `${fmtCAD(lease.rent)} a month`}</span>
       <MoneyBar slices={slices} thin />
       <KeyRow slices={slices} />
       <div className="hero-foot">
@@ -56,6 +55,7 @@ export function LeaseRow({ lease, role, me }: { lease: Lease; role: Role; me: st
   const h = headline(lease, role, me, now)
   const Icon = ICON[lease.status] ?? LockKeyhole
   const tone = h.mood === 'you' ? 'locked' : h.mood === 'good' ? 'good' : h.mood === 'stop' ? 'stop' : ''
+  const fig = leaseFigure(lease, role)
   return (
     <a className="row" href={`#/lease/${lease.id}`}>
       <span className={`ico ${tone}`}>
@@ -68,8 +68,8 @@ export function LeaseRow({ lease, role, me }: { lease: Lease; role: Role; me: st
         </span>
       </span>
       <span className="end">
-        {fmtCAD(lease.held)}
-        <small>locked</small>
+        {fmtCAD(fig.units)}
+        <small>{isClosed(lease) ? 'paid' : 'locked'}</small>
       </span>
       <ChevronRight className="chev" size={18} aria-hidden />
     </a>

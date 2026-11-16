@@ -51,6 +51,37 @@ export function moneyTrail(l: Lease) {
   return { rentTotal, fee, feeCharged, feeHeld, putIn, paid, locked, lent, returned: returned > 0n ? returned : 0n }
 }
 
+/** A lease that can no longer move money: everything is either paid out or back with the family. */
+export const isClosed = (l: Lease) => l.status === 'Completed' || l.status === 'Ended' || l.status === 'Refunded'
+
+/**
+ * The big number at the top of a lease, the same on every screen. While a lease is open it's what's
+ * still locked; once it closes, it's what the landlord was paid, with what went back to the family.
+ */
+export function leaseFigure(l: Lease, viewer: Role | 'public'): { label: string; units: bigint; sub?: string } {
+  const t = moneyTrail(l)
+  const family = viewer === 'family'
+  if (!isClosed(l))
+    return {
+      label: family ? 'Locked' : viewer === 'landlord' ? 'Locked for you' : 'Locked for the landlord',
+      units: l.held,
+    }
+  return {
+    label: family ? 'Paid to your landlord' : viewer === 'landlord' ? 'Paid to you' : 'Paid to the landlord',
+    units: t.paid,
+    sub: t.returned > 0n ? `${fmtCAD(t.returned)} ${family ? 'came back to you' : 'went back to the family'}` : undefined,
+  }
+}
+
+/** The right-hand line under the month tiles. */
+export function monthsLeftText(l: Lease) {
+  const left = l.periods - l.paidPeriods
+  if (l.status === 'Funded' || l.status === 'Accepted') return 'Month 1 pays at move-in'
+  if (l.status === 'Completed') return 'All paid'
+  if (isClosed(l)) return left > 0 ? `${left} returned` : 'All paid'
+  return `${left} to go`
+}
+
 export type Mood = 'you' | 'wait' | 'good' | 'stop'
 
 /** The one line at the top of a lease: what's happening, and (if anything) what's on you. */

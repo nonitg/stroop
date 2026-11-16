@@ -34,7 +34,7 @@ import {
   txsFor,
 } from '../stellar'
 import { useHomeCurrency, useLease, useNow, verifyLink } from '../hooks'
-import { fmtDate, fmtDuration, headline } from '../leaseText'
+import { fmtDate, fmtDuration, headline, leaseFigure, monthsLeftText } from '../leaseText'
 import { fmtMoney, landlordPayout, offRampQuote } from '../money'
 import { mediatorName } from '../mediators'
 import { type Action, leaseActions } from '../components/leaseActions'
@@ -121,6 +121,7 @@ function LeaseDetail({ lease, role, onChange }: { lease: Lease; role: Role; onCh
   const [lendInfo, setLendInfo] = useState(false)
   const family = role === 'family'
   const h = headline(lease, role, kp.publicKey(), now)
+  const fig = leaseFigure(lease, role)
   const actions = leaseActions(lease, role, kp, now)
   const primary = actions.find((a) => a.tier === 'primary')
   const secondary = actions.filter((a) => a.tier === 'secondary')
@@ -173,11 +174,9 @@ function LeaseDetail({ lease, role, onChange }: { lease: Lease; role: Role; onCh
       <div className="cols">
         <div className="col">
           <section className="glass card hero-card syrup">
-            <span className="label">{family ? 'Locked' : 'Locked for you'}</span>
-            <Amount units={lease.held} />
-            <span className="approx">
-              {fmtCAD(lease.rent)} a month · {lease.periods} months
-            </span>
+            <span className="label">{fig.label}</span>
+            <Amount units={fig.units} />
+            <span className="approx">{fig.sub ?? `${fmtCAD(lease.rent)} a month · ${lease.periods} months`}</span>
             <div className="hero-foot">
               <Status {...h} />
             </div>
@@ -237,9 +236,7 @@ function LeaseDetail({ lease, role, onChange }: { lease: Lease; role: Role; onCh
                 {periodsDue(lease, now) > 0 && ` · ${periodsDue(lease, now)} ready to ${family ? 'pay out' : 'collect'}`}
               </span>
               <span>
-                {lease.status === 'Funded' || lease.status === 'Accepted'
-                  ? 'Month 1 pays at move-in'
-                  : `${lease.periods - lease.paidPeriods} to go`}
+                {monthsLeftText(lease)}
               </span>
             </div>
           </section>
@@ -270,7 +267,7 @@ function LeaseDetail({ lease, role, onChange }: { lease: Lease; role: Role; onCh
             {!family && (
               <div>
                 <dt>Each month in your bank</dt>
-                <dd>≈ {fmtMoney(landlordPayout(Number(lease.rent) / 1e7).receive, 'CAD')}</dd>
+                <dd>{fmtMoney(landlordPayout(Number(lease.rent) / 1e7).receive, 'CAD')}</dd>
               </div>
             )}
             {(lease.status === 'Funded' || lease.status === 'Accepted') && (
@@ -485,12 +482,13 @@ function ConfirmSheet(props: {
       case 'end':
         return {
           title: l.endProposedBy ? 'Agree to end early?' : 'End the lease early?',
+          // Proposing settles later, when the other side agrees; rent keeps coming due until then.
           lede: l.endProposedBy
             ? 'The lease ends now.'
-            : `Only happens if your ${props.role === 'family' ? 'landlord' : 'tenant'} agrees.`,
+            : `Only happens if your ${props.role === 'family' ? 'landlord' : 'tenant'} agrees. Rent that comes due before then still goes to the landlord.`,
           rows: [
-            ['Rent owed to landlord', fmtCAD(owed)],
-            ['Back to the family', fmtCAD(l.held - owed)],
+            [l.endProposedBy ? 'Rent owed to landlord' : 'To landlord, if it ended now', fmtCAD(owed)],
+            [l.endProposedBy ? 'Back to the family' : 'Back to the family, if it ended now', fmtCAD(l.held - owed)],
           ],
           cta: l.endProposedBy ? 'Agree and end' : 'Send request',
         }
