@@ -146,7 +146,7 @@ export function useNow(intervalMs = 1000) {
 
 export function useWallet(role: Role) {
   const [kp, setKp] = useState<Keypair | null>(() => getKeypair(role))
-  const [balances, setBalances] = useState<{ xlm: number; usdc: number } | null>(null)
+  const [balances, setBalances] = useState<{ xlm: number; cad: number } | null>(null)
   // False until the first balance lookup finishes, so a returning user sees a loading state, not onboarding.
   const [checked, setChecked] = useState(!kp)
   const [step, setStep] = useState<string | null>(null)

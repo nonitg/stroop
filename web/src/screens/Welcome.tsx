@@ -44,8 +44,8 @@ export function Welcome({ role, wallet, onPick }: { role: Role | null; wallet?: 
     )
 
   const family = role === 'family'
-  const steps = ['Open your account', 'Turn on US dollars', ...(family ? ['Add US$20,000 test money'] : [])]
-  const matches = ['Creating account', 'Adding USDC', 'Receiving']
+  const steps = ['Open your account', 'Turn on Canadian dollars']
+  const matches = ['Creating account', 'Turning on']
   const current = wallet.step === 'Ready' ? steps.length : matches.findIndex((m) => wallet.step?.startsWith(m))
   return (
     <main className="screen bare">
@@ -58,7 +58,7 @@ export function Welcome({ role, wallet, onPick }: { role: Role | null; wallet?: 
         <h1 style={{ marginTop: 0 }}>{family ? 'Let’s get you set up.' : 'Free for landlords.'}</h1>
         <p className="lede">
           {family
-            ? 'About 15 seconds. You’ll start with test money to try a lease.'
+            ? 'About 10 seconds. You add money from your bank when you lock a lease.'
             : 'About 10 seconds. You never pay Stroop a fee.'}
         </p>
         {wallet.step ? (

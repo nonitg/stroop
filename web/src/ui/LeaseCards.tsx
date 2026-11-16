@@ -1,8 +1,8 @@
 import { Check, ChevronRight, KeyRound, LockKeyhole, Pause, Undo2 } from 'lucide-react'
-import { type Lease, type Role, fmtUSD } from '../stellar'
+import { type Lease, type Role, fmtCAD } from '../stellar'
 import { useNow } from '../hooks'
 import { headline } from '../leaseText'
-import { fmtMoney } from '../money'
+import { fmtMoney, perCad } from '../money'
 import { Amount } from './Amount'
 import { KeyRow, MoneyBar } from './MoneyBar'
 import { Status } from './Status'
@@ -18,7 +18,8 @@ export function LeaseHero({
   lease: Lease
   role: Role
   me: string
-  home?: { code: string; perUsd: number }
+  /** The renter's home currency, for a rough local figure. */
+  home?: string
 }) {
   const now = useNow()
   const h = headline(lease, role, me, now)
@@ -32,8 +33,8 @@ export function LeaseHero({
       </div>
       <Amount units={lease.held} />
       <span className="approx">
-        {home && home.code !== 'USD' ? `≈ ${fmtMoney(held * home.perUsd, home.code)} · ` : ''}
-        {fmtUSD(lease.rent)} a month
+        {home && home !== 'CAD' ? `≈ ${fmtMoney(held * perCad(home), home)} · ` : ''}
+        {fmtCAD(lease.rent)} a month
       </span>
       <MoneyBar slices={slices} thin />
       <KeyRow slices={slices} />
@@ -69,11 +70,11 @@ export function LeaseRow({ lease, role, me }: { lease: Lease; role: Role; me: st
       <span className="txt">
         <strong>{h.title}</strong>
         <span>
-          Lease {lease.id} · {fmtUSD(lease.rent)}/mo
+          Lease {lease.id} · {fmtCAD(lease.rent)}/mo
         </span>
       </span>
       <span className="end">
-        {fmtUSD(lease.held)}
+        {fmtCAD(lease.held)}
         <small>locked</small>
       </span>
       <ChevronRight className="chev" size={18} aria-hidden />

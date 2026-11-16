@@ -15,7 +15,7 @@ import {
 import { useApp } from '../app'
 import { explorer, resetDemo, short } from '../stellar'
 import { go, inviteLink, useHomeCurrency } from '../hooks'
-import { CAD, currency, fmtMoney } from '../money'
+import { CAD, currency, fmtMoney, perCad } from '../money'
 import { useCopy } from '../components/useCopy'
 import { Amount } from '../ui/Amount'
 import { Sheet } from '../ui/Sheet'
@@ -32,7 +32,7 @@ export function AccountScreen() {
   const [copied, setCopied] = useState(false)
   const kp = wallet.kp!
   const pub = kp.publicKey()
-  const usdc = wallet.balances?.usdc ?? 0
+  const cad = wallet.balances?.cad ?? 0
   const family = role === 'family'
   const local = family ? currency(code) : CAD
 
@@ -53,19 +53,19 @@ export function AccountScreen() {
 
       <section className="glass card hero-card syrup">
         <span className="label">Balance</span>
-        <Amount units={usdc} />
-        {local.code !== 'USD' && <span className="approx">≈ {fmtMoney(usdc * local.perUsd, local.code)}</span>}
+        <Amount units={cad} />
+        {local.code !== 'CAD' && <span className="approx">≈ {fmtMoney(cad * perCad(local.code), local.code)}</span>}
         {family ? (
           <div className="btn-pair">
             <button className="btn primary" onClick={() => setSheet('money')}>
               <Plus size={18} aria-hidden /> Add money
             </button>
-            <button className="btn secondary" onClick={() => setSheet('send')} disabled={usdc <= 0}>
+            <button className="btn secondary" onClick={() => setSheet('send')} disabled={cad <= 0}>
               <Send size={18} aria-hidden /> Send to bank
             </button>
           </div>
         ) : (
-          <button className="btn primary wide" onClick={() => setSheet('money')} disabled={usdc <= 0}>
+          <button className="btn primary wide" onClick={() => setSheet('money')} disabled={cad <= 0}>
             <Landmark size={18} aria-hidden /> Cash out to your bank
           </button>
         )}
@@ -159,13 +159,13 @@ export function AccountScreen() {
             open={sheet === 'send'}
             onClose={() => setSheet(null)}
             kp={kp}
-            amount={usdc}
+            amount={cad}
             code={code}
             title="Send to your bank"
           />
         </>
       ) : (
-        <CashOutSheet open={sheet === 'money'} onClose={() => setSheet(null)} kp={kp} amount={usdc} covered />
+        <CashOutSheet open={sheet === 'money'} onClose={() => setSheet(null)} kp={kp} amount={cad} covered />
       )}
       <CurrencySheet open={sheet === 'currency'} onClose={() => setSheet(null)} value={code} onChange={setCode} />
       <Sheet open={sheet === 'reset'} onClose={() => setSheet(null)} title="Start over?">

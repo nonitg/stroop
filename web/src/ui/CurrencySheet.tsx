@@ -2,13 +2,13 @@ import { Check } from 'lucide-react'
 import { CURRENCIES } from '../money'
 import { Sheet } from './Sheet'
 
-/** Pick the currency the family pays from. Canadian dollars are the landlord's side, so they're left out. */
+/** Pick the currency the family pays from: a Canadian bank (no exchange) or a bank at home. */
 export function CurrencySheet(props: { open: boolean; onClose: () => void; value: string; onChange: (code: string) => void }) {
   const { open, onClose, value, onChange } = props
   return (
     <Sheet open={open} onClose={onClose} title="Your currency">
       <ul className="list glass strong" style={{ borderRadius: 20 }}>
-        {CURRENCIES.filter((c) => c.code !== 'CAD').map((c) => (
+        {CURRENCIES.map((c) => (
           <li key={c.code}>
             <button
               className="row"

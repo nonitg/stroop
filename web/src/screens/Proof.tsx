@@ -1,5 +1,5 @@
 import { ArrowLeft, ArrowUpRight, BadgeCheck, LoaderCircle } from 'lucide-react'
-import { CASH_MONTHS, CONTRACTS, explorer, fmtUSD } from '../stellar'
+import { CASH_MONTHS, CONTRACTS, explorer, fmtCAD } from '../stellar'
 import { useLease, useNow } from '../hooks'
 import { fmtDate, headline } from '../leaseText'
 import { fmtMoney, landlordPayout } from '../money'
@@ -68,7 +68,7 @@ export function Proof({ id, back }: { id: number; back?: boolean }) {
         <div>
           <dt>Each month</dt>
           <dd>
-            {fmtUSD(lease.rent)}
+            {fmtCAD(lease.rent)}
             <small>≈ {fmtMoney(monthly.receive, 'CAD')} in the landlord’s bank. Stroop pays the cash-out fee.</small>
           </dd>
         </div>
@@ -83,14 +83,14 @@ export function Proof({ id, back }: { id: number; back?: boolean }) {
               {lease.lent > 0n ? 'Lent out, back before due' : 'Lent out after move-in'}
               <small>
                 The tenant chose this. The next {CASH_MONTHS} months always stay here. Any loss is paid by Stroop’s fund
-                {cover && ` (${fmtUSD(cover.cover)}, backing ${fmtUSD(cover.lent)} lent)`}.
+                {cover && ` (${fmtCAD(cover.cover)}, backing ${fmtCAD(cover.lent)} lent)`}.
               </small>
             </dd>
           </div>
         )}
         <div>
           <dt>Paid so far</dt>
-          <dd>{fmtUSD(lease.rent * BigInt(lease.paidPeriods))}</dd>
+          <dd>{fmtCAD(lease.rent * BigInt(lease.paidPeriods))}</dd>
         </div>
         {(lease.status === 'Funded' || lease.status === 'Accepted') && (
           <div>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { HandCoins, LockKeyhole, ShieldCheck } from 'lucide-react'
-import { CASH_MONTHS, coverStatus, fmtUSD, lendEarningsEstimate, lendSaving } from '../stellar'
+import { CASH_MONTHS, coverStatus, fmtCAD, lendEarningsEstimate, lendSaving } from '../stellar'
 import { fmtMoney } from '../money'
 import { Sheet } from './Sheet'
 
@@ -29,9 +29,9 @@ export function LendingSheet(props: {
 }) {
   const { open, onClose, rent, months, onAccept, children } = props
   const cover = useCover()
-  const fund = cover ? `Stroop’s fund (${fmtUSD(cover.cover)}, public on Stellar)` : 'Stroop’s fund (public on Stellar)'
-  const earns = fmtMoney(lendEarningsEstimate(rent, months), 'USD')
-  const saves = fmtUSD(lendSaving(rent, months))
+  const fund = cover ? `Stroop’s fund (${fmtCAD(cover.cover)}, public on Stellar)` : 'Stroop’s fund (public on Stellar)'
+  const earns = fmtMoney(lendEarningsEstimate(rent, months), 'CAD')
+  const saves = fmtCAD(lendSaving(rent, months))
   return (
     <Sheet open={open} onClose={onClose} title={onAccept ? 'Lend unused months?' : 'How lending works'}>
       <p className="lede">Stroop lends out rent you won’t need for months, and brings it back before it’s due.</p>

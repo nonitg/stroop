@@ -1,6 +1,6 @@
 // Tells each side what the other side just did, by diffing leases between polls.
 import { useEffect, useRef } from 'react'
-import { type Lease, type Role, fmtUSD } from './stellar'
+import { type Lease, type Role, fmtCAD } from './stellar'
 import type { ToastInput } from './components/useToast'
 
 const hushed = new Map<number, number>()
@@ -17,12 +17,12 @@ export function leaseNews(before: Snap | undefined, l: Lease, role: Role, me: st
   if (!before)
     return family
       ? null
-      : { title: 'New lease from a tenant', body: `${fmtUSD(l.held)} is locked for you. Review and accept.`, href }
+      : { title: 'New lease from a tenant', body: `${fmtCAD(l.held)} is locked for you. Review and accept.`, href }
   if (before.status !== l.status) {
     if (l.status === 'Accepted')
       return family ? { title: 'Your landlord accepted', body: 'Move in when you have the keys.', href } : null
     if (l.status === 'Active')
-      return family ? null : { title: 'Your tenant moved in', body: `${fmtUSD(l.rent)} for month 1 is in your balance.`, href }
+      return family ? null : { title: 'Your tenant moved in', body: `${fmtCAD(l.rent)} for month 1 is in your balance.`, href }
     if (l.status === 'Disputed') return { title: 'A problem was reported', body: 'Payouts are paused for mediation.', href }
     if (l.status === 'Refunded')
       return {
@@ -47,7 +47,7 @@ export function leaseNews(before: Snap | undefined, l: Lease, role: Role, me: st
       href,
     }
   if (l.paidPeriods > before.paidPeriods) {
-    const amount = fmtUSD(l.rent * BigInt(l.paidPeriods - before.paidPeriods))
+    const amount = fmtCAD(l.rent * BigInt(l.paidPeriods - before.paidPeriods))
     return family
       ? { title: `Month ${l.paidPeriods} paid`, body: `${amount} went to your landlord.`, href }
       : { title: 'Rent arrived', body: `${amount} for month ${l.paidPeriods}. Ready to cash out.`, href }

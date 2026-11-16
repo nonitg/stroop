@@ -4,7 +4,7 @@ import {
   type Role,
   disputeWindowSecs,
   leaseFee,
-  fmtUSD,
+  fmtCAD,
   proposalOpen,
   proposalWindowSecs,
   periodsDue,
@@ -29,7 +29,7 @@ export const inDisputeWindow = (l: Lease, now: number) =>
 
 /** The fee is a fixed share of the rent; the contract pays it out at move-in or refunds it. */
 export function feeLine(l: Lease): { amount: string; state: string } {
-  const amount = fmtUSD(leaseFee(l))
+  const amount = fmtCAD(leaseFee(l))
   if (l.start > 0) return { amount, state: 'paid at move-in' }
   if (l.status === 'Refunded' || l.status === 'Ended') return { amount, state: 'refunded' }
   return { amount, state: 'held until move-in' }
@@ -105,7 +105,7 @@ export function headline(l: Lease, role: Role, me: string, now: number): { title
               mood: 'good',
             }
           : {
-              title: `${fmtUSD(l.rent * BigInt(due))} ready to collect`,
+              title: `${fmtCAD(l.rent * BigInt(due))} ready to collect`,
               sub: `Month ${l.paidPeriods} of ${l.periods} paid so far.`,
               mood: 'you',
             }

@@ -8,9 +8,10 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 NET=testnet
 C=$(python3 -c 'import json;print(json.load(open("web/src/contracts.json"))["rentReserve"])')
-SAC=$(python3 -c 'import json;print(json.load(open("web/src/contracts.json"))["usdcSac"])')
+SAC=$(python3 -c 'import json;print(json.load(open("web/src/contracts.json"))["tokenSac"])')
 FAUCET=$(python3 -c 'import json;print(json.load(open("web/src/contracts.json"))["faucet"])')
-ISSUER=$(python3 -c 'import json;print(json.load(open("web/src/contracts.json"))["usdcIssuer"])')
+ISSUER=$(python3 -c 'import json;print(json.load(open("web/src/contracts.json"))["tokenIssuer"])')
+CODE=$(python3 -c 'import json;print(json.load(open("web/src/contracts.json"))["tokenCode"])')
 MEDIATOR=$(python3 -c 'import json;print(json.load(open("web/src/contracts.json"))["mediator"])')
 VAULT=$(python3 -c 'import json;print(json.load(open("web/src/contracts.json"))["vault"])')
 RUN=$RANDOM
@@ -18,7 +19,7 @@ inv() { stellar contract invoke --network $NET "$@" 2>/dev/null; }
 
 for r in payer landlord; do
   stellar keys generate "smoke-$r-$RUN" --network $NET --fund >/dev/null 2>&1
-  stellar tx new change-trust --line "USDC:$ISSUER" --source "smoke-$r-$RUN" --network $NET >/dev/null 2>&1
+  stellar tx new change-trust --line "$CODE:$ISSUER" --source "smoke-$r-$RUN" --network $NET >/dev/null 2>&1
 done
 P=$(stellar keys address smoke-payer-$RUN); L=$(stellar keys address smoke-landlord-$RUN)
 inv --id $FAUCET --source smoke-payer-$RUN -- drip --to $P >/dev/null

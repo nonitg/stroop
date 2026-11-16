@@ -25,7 +25,7 @@ import {
   explainError,
   explorer,
   leaseFee,
-  fmtUSD,
+  fmtCAD,
   getKeypair,
   logTx,
   periodsDue,
@@ -35,7 +35,7 @@ import {
 } from '../stellar'
 import { useHomeCurrency, useLease, useNow, verifyLink } from '../hooks'
 import { fmtDate, fmtDuration, headline } from '../leaseText'
-import { currency, fmtMoney, landlordPayout, offRampQuote } from '../money'
+import { currency, fmtMoney, landlordPayout, offRampQuote, perCad } from '../money'
 import { mediatorName } from '../mediators'
 import { type Action, leaseActions } from '../components/leaseActions'
 import { useToast } from '../components/useToast'
@@ -178,8 +178,8 @@ function LeaseDetail({ lease, role, onChange }: { lease: Lease; role: Role; onCh
             <span className="label">{family ? 'Locked' : 'Locked for you'}</span>
             <Amount units={lease.held} />
             <span className="approx">
-              {family && home.code !== 'USD' && `≈ ${fmtMoney((Number(lease.held) / 1e7) * home.perUsd, home.code)} · `}
-              {fmtUSD(lease.rent)} a month · {lease.periods} months
+              {family && home.code !== 'CAD' && `≈ ${fmtMoney((Number(lease.held) / 1e7) * perCad(home.code), home.code)} · `}
+              {fmtCAD(lease.rent)} a month · {lease.periods} months
             </span>
             <div className="hero-foot">
               <Status {...h} />
@@ -253,13 +253,13 @@ function LeaseDetail({ lease, role, onChange }: { lease: Lease; role: Role; onCh
             <MoneyBar slices={slices} />
             <Ledger
               slices={slices.filter((s) => s.value > 0)}
-              total={{ label: family ? 'You put in' : 'Lease total', amount: fmtUSD(BigInt(Math.round(total * 1e7))) }}
+              total={{ label: family ? 'You put in' : 'Lease total', amount: fmtCAD(BigInt(Math.round(total * 1e7))) }}
             />
             {/* Blend rounds to the unit; only mention a gap someone could notice (a cent or more). */}
             {lease.covered >= 100_000n && (
               <p className="callout good" style={{ marginTop: 12 }}>
                 <ShieldCheck size={17} aria-hidden />
-                <span>Lending came back {fmtUSD(lease.covered)} short. Stroop paid it, so the lease is whole.</span>
+                <span>Lending came back {fmtCAD(lease.covered)} short. Stroop paid it, so the lease is whole.</span>
               </p>
             )}
           </section>
@@ -309,7 +309,7 @@ function LeaseDetail({ lease, role, onChange }: { lease: Lease; role: Role; onCh
                   </span>
                   <span className="txt">
                     <strong>Lending is on</strong>
-                    <span>{lease.lent > 0n ? `${fmtUSD(lease.lent)} lent · back before it’s due` : 'Nothing lent right now'}</span>
+                    <span>{lease.lent > 0n ? `${fmtCAD(lease.lent)} lent · back before it’s due` : 'Nothing lent right now'}</span>
                   </span>
                   <ChevronRight className="chev" size={18} aria-hidden />
                 </button>
@@ -436,15 +436,15 @@ function ConfirmSheet(props: {
   onConfirm: () => void
 }) {
   const { action: a, lease: l, now, onClose, onConfirm } = props
-  const rent = fmtUSD(l.rent)
+  const rent = fmtCAD(l.rent)
   const fee = leaseFee(l)
   const owed = l.rent * BigInt(periodsDue(l, now))
   const [code] = useHomeCurrency()
-  // Refunds land in US$; sending them home costs another exchange, so show what actually arrives.
+  // Refunds land in C$; sending them home costs an exchange, so show what actually arrives.
   const home = (units: bigint) =>
-    code === 'USD'
+    code === 'CAD'
       ? undefined
-      : `≈ ${fmtMoney(offRampQuote(Number(units) / 1e7, code).receive, code)} in your bank after the ~0.5% cash-out fee`
+      : `≈ ${fmtMoney(offRampQuote(Number(units) / 1e7, code).receive, code)} at home, at today’s rate`
   const spec: { title: string; lede?: string; rows: [string, string, string?][]; cta: string; danger?: boolean } = (() => {
     switch (a.id) {
       case 'accept':
@@ -452,10 +452,10 @@ function ConfirmSheet(props: {
           title: 'Accept this lease?',
           lede: `Your tenant must move in by ${fmtDate(l.moveInBy)}`,
           rows: [
-            ['Each month', rent, `≈ ${fmtMoney(landlordPayout(Number(l.rent) / 1e7).receive, 'CAD')} in your bank`],
+            ['Each month', rent, 'Lands in full in your bank'],
             ['Term', `${l.periods} months`],
             ['Stroop’s fee for you', 'None'],
-            ['Rent is set in US$', 'C$ moves with the rate'],
+            ['Rent is set in C$', 'No exchange rate risk'],
           ],
           cta: 'Accept lease',
         }
@@ -472,8 +472,8 @@ function ConfirmSheet(props: {
           lede: 'Only once you have the keys.',
           rows: [
             ['Month 1 to landlord', rent],
-            [`Stroop fee · ${FEE_PCT}`, fmtUSD(fee)],
-            ['Stays locked', fmtUSD(l.held - l.rent)],
+            [`Stroop fee · ${FEE_PCT}`, fmtCAD(fee)],
+            ['Stays locked', fmtCAD(l.held - l.rent)],
           ],
           cta: 'Confirm move-in',
         }
@@ -482,7 +482,7 @@ function ConfirmSheet(props: {
         return {
           title: 'Take your rent back?',
           lede: 'The lease is cancelled. Nothing is charged.',
-          rows: [['Back to your balance', fmtUSD(l.held + l.fee), home(l.held + l.fee)]],
+          rows: [['Back to your balance', fmtCAD(l.held + l.fee), home(l.held + l.fee)]],
           cta: 'Take it back',
         }
       case 'end':
@@ -492,8 +492,8 @@ function ConfirmSheet(props: {
             ? 'The lease ends now.'
             : `Only happens if your ${props.role === 'family' ? 'landlord' : 'tenant'} agrees.`,
           rows: [
-            ['Rent owed to landlord', fmtUSD(owed)],
-            ['Back to the family', fmtUSD(l.held - owed)],
+            ['Rent owed to landlord', fmtCAD(owed)],
+            ['Back to the family', fmtCAD(l.held - owed)],
           ],
           cta: l.endProposedBy ? 'Agree and end' : 'Send request',
         }
@@ -501,13 +501,13 @@ function ConfirmSheet(props: {
         return {
           title: 'Stop lending?',
           lede: 'Lent rent comes back to the lease now. Your fee doesn’t change.',
-          rows: l.lent > 0n ? [['Comes back', fmtUSD(l.lent)]] : [],
+          rows: l.lent > 0n ? [['Comes back', fmtCAD(l.lent)]] : [],
           cta: 'Stop lending',
         }
       case 'dispute':
         return {
           title: 'Report a problem?',
-          lede: `Payouts pause. ${mediatorName(l.mediator)} splits the locked ${fmtUSD(l.held)}. Rent already paid stays paid.`,
+          lede: `Payouts pause. ${mediatorName(l.mediator)} splits the locked ${fmtCAD(l.held)}. Rent already paid stays paid.`,
           rows: [],
           cta: 'Pause and report',
           danger: true,

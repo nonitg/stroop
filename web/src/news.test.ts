@@ -20,6 +20,9 @@ const lease: Lease = {
   landlordOwed: 0n,
   status: 'Active',
   endProposedAt: 0,
+  lend: false,
+  lent: 0n,
+  covered: 0n,
 }
 
 describe('leaseNews', () => {

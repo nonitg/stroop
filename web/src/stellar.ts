@@ -22,8 +22,9 @@ export const NET = {
 export const CONTRACTS = ids
 /** Stroop's fee, as the deployed contract charges it (e.g. "0.5%"). */
 export const FEE_PCT = pct(ids.feeBps / 10_000)
-export const USDC = new Asset('USDC', ids.usdcIssuer)
-const UNIT = 10_000_000n // USDC has 7 decimals on Stellar
+/** The stablecoin leases are held in: test CAD on testnet, a regulated CAD stablecoin in production. */
+export const TOKEN = new Asset(ids.tokenCode, ids.tokenIssuer)
+const UNIT = 10_000_000n // Stellar assets have 7 decimals
 
 // Demo clock: one rent "month" passes every minute so the whole lease fits in a demo.
 export const DEMO_PERIOD_SECS = 60
@@ -71,7 +72,7 @@ export const CASH_MONTHS = 3
 export const MIN_LEND_MONTHS = 9
 /** Flat amount off the fee for leases that opt into lending. */
 export const LEND_DISCOUNT = BigInt(ids.lendDiscount)
-/** Rough yearly rate Blend's main USDC pool paid in Nov 2026; only used to show Stroop's likely cut. */
+/** Rough yearly rate Blend's main stablecoin pool paid in Nov 2026; only used to show Stroop's likely cut. */
 const LEND_RATE_ESTIMATE = 0.06
 
 /** What Stroop can expect to earn lending this lease, in dollars, if it runs its full term. */
@@ -108,7 +109,7 @@ export const explorer = {
 
 export const toUnits = (dollars: number) => BigInt(Math.round(dollars * 100)) * (UNIT / 100n)
 export const fromUnits = (units: bigint) => Number(units) / Number(UNIT)
-export const fmtUSD = (units: bigint) => fmtMoney(fromUnits(units), 'USD', { cents: units % (UNIT / 1n) !== 0n })
+export const fmtCAD = (units: bigint) => fmtMoney(fromUnits(units), 'CAD', { cents: units % (UNIT / 1n) !== 0n })
 export const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`
 
 // ---------- Demo wallets (testnet only; production would use passkey smart wallets) ----------
@@ -129,7 +130,7 @@ export function resetDemo() {
   localStorage.removeItem('rp:txs')
 }
 
-/** Creates and funds a testnet wallet: XLM for fees, a USDC trustline, and demo USDC. */
+/** Creates a testnet wallet: XLM for network fees and a trustline so it can hold C$. Money comes later, through the on-ramp. */
 export async function setupWallet(role: Role, onStep: (step: string) => void): Promise<Keypair> {
   const kp = getKeypair(role) ?? Keypair.random()
   localStorage.setItem(keyName(role), kp.secret())
@@ -140,32 +141,26 @@ export async function setupWallet(role: Role, onStep: (step: string) => void): P
     if (!res.ok && !(await accountExists(kp.publicKey()))) throw new Error('Friendbot could not fund the account')
   }
 
-  onStep('Adding USDC to the wallet')
+  onStep('Turning on Canadian dollars')
   const account = await horizon.loadAccount(kp.publicKey())
   const hasTrust = account.balances.some(
-    (b) => 'asset_code' in b && b.asset_code === 'USDC' && b.asset_issuer === ids.usdcIssuer,
+    (b) => 'asset_code' in b && b.asset_code === ids.tokenCode && b.asset_issuer === ids.tokenIssuer,
   )
   if (!hasTrust) {
     const tx = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: NET.passphrase })
-      .addOperation(Operation.changeTrust({ asset: USDC }))
+      .addOperation(Operation.changeTrust({ asset: TOKEN }))
       .setTimeout(60)
       .build()
     tx.sign(kp)
     await horizon.submitTransaction(tx)
   }
 
-  if (role === 'family') {
-    onStep('Receiving 20,000 test USDC from the faucet')
-    await dripTestUsdc(kp)
-  }
   onStep('Ready')
   return kp
 }
 
-export const TEST_DRIP_USDC = 20_000
-
-/** Testnet stand-in for an on-ramp: mints 20,000 test USDC to the account. */
-export async function dripTestUsdc(kp: Keypair) {
+/** Testnet stand-in for the on-ramp: mints exactly the C$ the family's bank transfer would have bought. */
+export async function addTestMoney(kp: Keypair, dollars: number) {
   const faucet = await contract.Client.from({
     contractId: ids.faucet,
     networkPassphrase: NET.passphrase,
@@ -173,7 +168,7 @@ export async function dripTestUsdc(kp: Keypair) {
     publicKey: kp.publicKey(),
     ...contract.basicNodeSigner(kp, NET.passphrase),
   })
-  const tx = await (faucet as any).drip({ to: kp.publicKey() })
+  const tx = await (faucet as any).send({ to: kp.publicKey(), amount: toUnits(dollars) })
   await tx.signAndSend()
 }
 
@@ -186,16 +181,16 @@ async function accountExists(pub: string) {
   }
 }
 
-export async function getBalances(pub: string): Promise<{ xlm: number; usdc: number } | null> {
+export async function getBalances(pub: string): Promise<{ xlm: number; cad: number } | null> {
   try {
     const acc = await horizon.loadAccount(pub)
     let xlm = 0
-    let usdc = 0
+    let cad = 0
     for (const b of acc.balances) {
       if (b.asset_type === 'native') xlm = Number(b.balance)
-      else if ('asset_code' in b && b.asset_code === 'USDC' && b.asset_issuer === ids.usdcIssuer) usdc = Number(b.balance)
+      else if ('asset_code' in b && b.asset_code === ids.tokenCode && b.asset_issuer === ids.tokenIssuer) cad = Number(b.balance)
     }
-    return { xlm, usdc }
+    return { xlm, cad }
   } catch {
     return null
   }
@@ -240,7 +235,7 @@ export function explainError(e: unknown): string {
   const msg = e instanceof Error ? e.message : String(e)
   const m = msg.match(/Error\(Contract, #(\d+)\)/)
   if (m) return ERRORS[Number(m[1])] ?? `Contract rejected the transaction (code ${m[1]}).`
-  if (/balance|underfunded|insufficient/i.test(msg)) return 'Not enough USDC in this wallet.'
+  if (/balance|underfunded|insufficient/i.test(msg)) return 'Not enough money in this account.'
   return msg.length > 160 ? msg.slice(0, 160) + '…' : msg
 }
 

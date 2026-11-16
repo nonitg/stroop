@@ -1,9 +1,9 @@
 import { type ReactNode, useState } from 'react'
 import { Landmark, LockKeyhole, Plus, Send, Share } from 'lucide-react'
 import { useApp } from '../app'
-import { fmtUSD, secsToNextRelease, toUnits } from '../stellar'
+import { fmtCAD, secsToNextRelease, toUnits } from '../stellar'
 import { inviteLink, useHomeCurrency, useNow, verifyLink } from '../hooks'
-import { currency, fmtMoney, landlordPayout } from '../money'
+import { fmtMoney, landlordPayout, perCad } from '../money'
 import { fmtClock, headline } from '../leaseText'
 import { Amount } from '../ui/Amount'
 import { BrandMark } from '../ui/BrandMark'
@@ -43,8 +43,7 @@ export function FamilyHome() {
   const [sheet, setSheet] = useState<'add' | 'send' | null>(null)
   const kp = wallet.kp!
   const me = kp.publicKey()
-  const usdc = wallet.balances?.usdc ?? 0
-  const home = currency(code)
+  const cad = wallet.balances?.cad ?? 0
   const top = leases?.length ? featured(leases) : null
   const rest = leases?.filter((l) => l !== top) ?? []
   const paid = (leases ?? []).reduce((s, l) => s + l.rent * BigInt(l.paidPeriods), 0n)
@@ -69,11 +68,11 @@ export function FamilyHome() {
             Start
           </a>
           <p className="fine" style={{ marginTop: 14 }}>
-            {fmtUSD(toUnits(usdc))} test money ready
+            {cad > 0 ? `${fmtCAD(toUnits(cad))} in your balance` : 'You add money from your bank when you lock.'}
           </p>
         </section>
       )}
-      {top && <LeaseHero lease={top} role="family" me={me} home={{ code, perUsd: home.perUsd }} />}
+      {top && <LeaseHero lease={top} role="family" me={me} home={code} />}
       {top && (
         <>
           <div className="quick">
@@ -99,12 +98,12 @@ export function FamilyHome() {
           <div className="stat-row">
             <a className="stat" href="#/account" style={{ textDecoration: 'none' }}>
               <span className="label">Your balance</span>
-              <strong>{fmtUSD(toUnits(usdc))}</strong>
-              {home.code !== 'USD' && <span className="small">≈ {fmtMoney(usdc * home.perUsd, home.code)}</span>}
+              <strong>{fmtCAD(toUnits(cad))}</strong>
+              {code !== 'CAD' && <span className="small">≈ {fmtMoney(cad * perCad(code), code)}</span>}
             </a>
             <div className="stat">
               <span className="label">Paid to landlords</span>
-              <strong>{fmtUSD(paid)}</strong>
+              <strong>{fmtCAD(paid)}</strong>
               <span className="small">Every payment has a receipt</span>
             </div>
           </div>
@@ -127,7 +126,7 @@ export function FamilyHome() {
         open={sheet === 'send'}
         onClose={() => setSheet(null)}
         kp={kp}
-        amount={usdc}
+        amount={cad}
         code={code}
         title="Send to your bank"
       />
@@ -142,7 +141,7 @@ export function LandlordHome() {
   const [cashing, setCashing] = useState(false)
   const kp = wallet.kp!
   const me = kp.publicKey()
-  const usdc = wallet.balances?.usdc ?? 0
+  const cad = wallet.balances?.cad ?? 0
   const locked = (leases ?? []).reduce((s, l) => s + l.held, 0n)
   const earned = (leases ?? []).reduce((s, l) => s + l.rent * BigInt(l.paidPeriods), 0n)
   const nextSecs = (leases ?? [])
@@ -164,13 +163,13 @@ export function LandlordHome() {
 
       <section className="glass card hero-card" style={urgent ? { marginTop: 14 } : undefined}>
         <span className="label">Ready to cash out</span>
-        <Amount units={landlordPayout(usdc).receive} code="CAD" />
+        <Amount units={landlordPayout(cad).receive} code="CAD" />
         <span className="approx">
-          {usdc > 0
-            ? `${fmtMoney(usdc, 'USD', { cents: usdc % 1 !== 0 })} received · cash-out fee on us`
+          {cad > 0
+            ? 'Already in C$ · cash-out fee on us'
             : 'Rent lands here on each payday.'}
         </span>
-        <button className="btn primary wide" onClick={() => setCashing(true)} disabled={usdc <= 0}>
+        <button className="btn primary wide" onClick={() => setCashing(true)} disabled={cad <= 0}>
           <Landmark size={18} aria-hidden /> Cash out to your bank
         </button>
       </section>
@@ -179,12 +178,12 @@ export function LandlordHome() {
         <div className="stat-row">
           <div className="stat">
             <span className="label">Earned so far</span>
-            <strong>{fmtUSD(earned)}</strong>
-            <span className="small">≈ {fmtMoney(landlordPayout(Number(earned) / 1e7).receive, 'CAD')}</span>
+            <strong>{fmtCAD(earned)}</strong>
+            <span className="small">Every payment has a receipt</span>
           </div>
           <div className="stat">
             <span className="label">Locked for you</span>
-            <strong>{fmtUSD(locked)}</strong>
+            <strong>{fmtCAD(locked)}</strong>
             <span className="small num">
               {nextSecs !== undefined ? `Next rent in ${fmtClock(nextSecs)}` : 'Paid out monthly'}
             </span>
@@ -216,7 +215,7 @@ export function LandlordHome() {
           </ul>
         </>
       )}
-      <CashOutSheet open={cashing} onClose={() => setCashing(false)} kp={kp} amount={usdc} covered />
+      <CashOutSheet open={cashing} onClose={() => setCashing(false)} kp={kp} amount={cad} covered />
     </main>
   )
 }

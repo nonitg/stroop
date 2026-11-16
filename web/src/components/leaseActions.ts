@@ -5,7 +5,7 @@ import {
   type Lease,
   type Role,
   disputeWindowSecs,
-  fmtUSD,
+  fmtCAD,
   periodsDue,
   proposalOpen,
   reserve,
@@ -126,9 +126,9 @@ function landlordActions(lease: Lease, kp: Keypair, now: number): Action[] {
   if (startsOnRelease(lease, now))
     actions.push({
       id: 'start',
-      label: `Start lease · collect ${fmtUSD(lease.rent * BigInt(due))}`,
+      label: `Start lease · collect ${fmtCAD(lease.rent * BigInt(due))}`,
       done: 'Lease started',
-      doneBody: `${fmtUSD(lease.rent * BigInt(due))} is in your balance.`,
+      doneBody: `${fmtCAD(lease.rent * BigInt(due))} is in your balance.`,
       tier: 'primary',
       Icon: HandCoins,
       run: release,
@@ -136,9 +136,9 @@ function landlordActions(lease: Lease, kp: Keypair, now: number): Action[] {
   if (lease.status === 'Active' && due > 0)
     actions.push({
       id: 'collect',
-      label: `Collect ${fmtUSD(lease.rent * BigInt(due))}`,
+      label: `Collect ${fmtCAD(lease.rent * BigInt(due))}`,
       done: 'Rent collected',
-      doneBody: `${fmtUSD(lease.rent * BigInt(due))} is in your balance.`,
+      doneBody: `${fmtCAD(lease.rent * BigInt(due))} is in your balance.`,
       tier: 'primary',
       Icon: HandCoins,
       run: release,
@@ -156,9 +156,9 @@ function landlordActions(lease: Lease, kp: Keypair, now: number): Action[] {
   if (lease.landlordOwed > 0n)
     actions.push({
       id: 'claim',
-      label: `Claim ${fmtUSD(lease.landlordOwed)}`,
+      label: `Claim ${fmtCAD(lease.landlordOwed)}`,
       done: 'Rent claimed',
-      doneBody: `${fmtUSD(lease.landlordOwed)} is in your balance.`,
+      doneBody: `${fmtCAD(lease.landlordOwed)} is in your balance.`,
       tier: 'secondary',
       Icon: HandCoins,
       run: () => reserve.claim(kp, id),

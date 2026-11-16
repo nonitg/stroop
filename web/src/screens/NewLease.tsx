@@ -9,7 +9,7 @@ import {
   MIN_LEND_MONTHS,
   explainError,
   feeFor,
-  fmtUSD,
+  fmtCAD,
   fromUnits,
   getKeypair,
   logTx,
@@ -17,7 +17,7 @@ import {
   setupWallet,
   toUnits,
 } from '../stellar'
-import { LOCK_FEE_XLM, ON_RAMP_FEE, XLM_USD, currency, fmtMoney, onRampQuote } from '../money'
+import { FX_FEE, LOCK_FEE_XLM, XLM_CAD, fmtMoney, onRampQuote, perCad } from '../money'
 import { STROOP_DESK, mediatorName, mediatorProblem } from '../mediators'
 import { go, useHomeCurrency, verifyLink } from '../hooks'
 import { useToast } from '../components/useToast'
@@ -56,8 +56,10 @@ export function NewLease({ to }: { to?: string }) {
   const fee = feeFor(rentTotal, lend)
   const lockUnits = rentTotal + fee
   const landlordOk = StrKey.isValidEd25519PublicKey(landlord.trim()) && landlord.trim() !== kp.publicKey()
-  const balance = wallet.balances?.usdc ?? 0
+  const balance = wallet.balances?.cad ?? 0
   const enough = balance >= fromUnits(lockUnits)
+  // Rounded up to the cent so one top-up always covers the lock.
+  const shortfall = Math.ceil((fromUnits(lockUnits) - balance) * 100) / 100
 
   const useDemoLandlord = async () => {
     setBusy('demo')
@@ -83,7 +85,7 @@ export function NewLease({ to }: { to?: string }) {
       if (hash) logTx({ leaseId: id, label: 'Rent locked', hash, at: Date.now() })
       toast({
         title: 'Rent locked',
-        body: `${fmtUSD(lockUnits)} is held for lease ${id}.`,
+        body: `${fmtCAD(lockUnits)} is held for lease ${id}.`,
         hash,
         secs: (performance.now() - t0) / 1000,
       })
@@ -106,7 +108,7 @@ export function NewLease({ to }: { to?: string }) {
           </span>
           <h1 style={{ margin: '0 0 10px' }}>Rent locked.</h1>
           <p className="lede" style={{ margin: '0 auto' }}>
-            Send your landlord the proof link. They’ll see {fmtUSD(rentTotal)} waiting for them.
+            Send your landlord the proof link. They’ll see {fmtCAD(rentTotal)} waiting for them.
           </p>
           <div style={{ display: 'grid', gap: 10, width: '100%', marginTop: 32 }}>
             <button className="btn primary" onClick={() => share(verifyLink(created), 'Proof link', 'Send it to your landlord.')}>
@@ -182,14 +184,14 @@ export function NewLease({ to }: { to?: string }) {
           <h1 className="q">How much is rent?</h1>
           <section className="glass card" style={{ padding: '6px 20px' }}>
             <label className="big-input" htmlFor="rent">
-              <span className="cur">US$</span>
+              <span className="cur">C$</span>
               <input
                 id="rent"
                 inputMode="decimal"
                 value={rent}
                 onChange={(e) => setRent(e.target.value.replace(/[^\d.]/g, ''))}
                 style={{ width: `${Math.max(2, rent.length) + 0.15}ch` }}
-                aria-label="Monthly rent in US dollars"
+                aria-label="Monthly rent in Canadian dollars"
               />
             </label>
             <button
@@ -197,7 +199,7 @@ export function NewLease({ to }: { to?: string }) {
               style={{ margin: '0 auto 10px', display: 'flex' }}
               onClick={() => setSheet('currency')}
             >
-              {code === 'USD' ? 'a month · paying in US$' : `≈ ${fmtMoney(rentNum * currency(code).perUsd, code)} a month`}
+              {code === 'CAD' ? 'a month · paying from a Canadian bank' : `≈ ${fmtMoney(rentNum * perCad(code), code)} a month`}
               <ChevronRight size={15} aria-hidden />
             </button>
           </section>
@@ -253,15 +255,19 @@ export function NewLease({ to }: { to?: string }) {
                 ) : (
                   <LockKeyhole size={18} aria-hidden />
                 )}
-                {busy === 'lock' ? 'Locking on Stellar…' : `Lock ${fmtMoney(quoteLease(rentNum, months, code, lend).pay, code)}`}
+                {busy === 'lock' ? 'Locking on Stellar…' : `Lock ${fmtCAD(lockUnits)}`}
               </button>
             ) : (
               <button className="btn primary wide" onClick={() => setSheet('add')}>
-                <Plus size={18} aria-hidden /> Add money to continue
+                <Plus size={18} aria-hidden /> Add {fmtMoney(onRampQuote(shortfall, code).pay, code)} from your bank
               </button>
             )}
             <p className="fine" style={{ marginTop: 8 }}>
-              {fmtUSD(rentTotal)} for your landlord + {fmtUSD(fee)} Stroop fee · testnet uses your test balance
+              {enough
+                ? `${fmtCAD(rentTotal)} for your landlord + ${fmtCAD(fee)} Stroop fee, from your C$ balance`
+                : balance > 0
+                  ? `You have ${fmtMoney(balance, 'CAD', { cents: true })}. Add the rest, then lock.`
+                  : 'Step 1: add money. Step 2: lock it.'}
             </p>
           </div>
         </Review>
@@ -286,52 +292,59 @@ export function NewLease({ to }: { to?: string }) {
         payer={kp.publicKey()}
         landlord={landlord}
       />
-      <AddMoneySheet open={sheet === 'add'} onClose={() => setSheet(null)} kp={kp} code={code} onAdded={wallet.refresh} />
+      <AddMoneySheet
+        open={sheet === 'add'}
+        onClose={() => setSheet(null)}
+        kp={kp}
+        code={code}
+        cad={shortfall}
+        onAdded={wallet.refresh}
+      />
     </main>
   )
 }
 
 /** What leaves the family's bank for this lease, split by who keeps each part, in their own currency. */
 function quoteLease(rent: number, months: number, code: string, lend: boolean) {
-  const usdRent = rent * months
-  const usdFee = fromUnits(feeFor(toUnits(usdRent), lend))
-  const usdNet = LOCK_FEE_XLM * XLM_USD
-  const q = onRampQuote(usdRent + usdFee, code)
-  const perUsd = q.rate
-  const local = (usd: number) => fmtMoney(usd, code)
-  const pay = q.pay + usdNet * perUsd
+  const cadRent = rent * months
+  const cadFee = fromUnits(feeFor(toUnits(cadRent), lend))
+  const cadNet = LOCK_FEE_XLM * XLM_CAD
+  const q = onRampQuote(cadRent + cadFee, code)
+  const rate = q.rate
+  const local = (n: number) => fmtMoney(n, code)
+  const pay = q.pay + cadNet * rate
   const slices: Slice[] = [
     {
       tone: 'locked',
-      value: usdRent * perUsd,
+      value: cadRent * rate,
       label: 'Rent',
       who: `Locked, paid to your landlord monthly`,
-      amount: local(usdRent * perUsd),
+      amount: local(cadRent * rate),
     },
     {
       tone: 'fee',
-      value: usdFee * perUsd,
-      label: lend ? `Stroop fee · ${FEE_PCT} − ${fmtUSD(LEND_DISCOUNT)}` : `Stroop fee · ${FEE_PCT}`,
+      value: cadFee * rate,
+      label: lend ? `Stroop fee · ${FEE_PCT} − ${fmtCAD(LEND_DISCOUNT)}` : `Stroop fee · ${FEE_PCT}`,
       who: 'Only if you move in',
-      amount: local(usdFee * perUsd),
+      amount: local(cadFee * rate),
     },
   ]
   if (q.fee > 0)
     slices.push({
       tone: 'partner',
       value: q.fee,
-      label: `Currency exchange · ~${ON_RAMP_FEE * 100}%`,
+      label: `Currency exchange · ~${FX_FEE * 100}%`,
       who: 'Exchange partner, not Stroop',
       amount: local(q.fee),
     })
   slices.push({
     tone: 'partner',
-    value: usdNet * perUsd,
+    value: cadNet * rate,
     label: 'Network fee',
     who: 'Stellar',
-    amount: fmtMoney(usdNet * perUsd, code, { cents: usdNet * perUsd < 1 }),
+    amount: fmtMoney(cadNet * rate, code, { cents: cadNet * rate < 1 }),
   })
-  return { slices, pay, perUsd, ofHundred: Math.floor(((usdRent * perUsd) / pay) * 100) }
+  return { slices, pay, rate, ofHundred: Math.floor(((cadRent * rate) / pay) * 100) }
 }
 
 /** Where your money goes: the one number that leaves your bank, then who keeps each part. */
@@ -348,7 +361,7 @@ function Review(props: {
   children: ReactNode
 }) {
   const { rent, months, code, mediator, lend, canLend, onLend, onMediator, onCurrency, children } = props
-  const { slices, pay, perUsd, ofHundred } = quoteLease(rent, months, code, lend)
+  const { slices, pay, rate, ofHundred } = quoteLease(rent, months, code, lend)
   const local = (n: number) => fmtMoney(n, code)
   return (
     <>
@@ -361,8 +374,8 @@ function Review(props: {
           {local(pay)}
         </span>
         <span className="approx">
-          {months} × {fmtMoney(rent, 'USD')} rent
-          {code !== 'USD' && ` · 1 US$ = ${fmtMoney(perUsd, code, { cents: perUsd < 100 })}`}
+          {months} × {fmtMoney(rent, 'CAD')} rent
+          {code !== 'CAD' && ` · C$1 = ${fmtMoney(rate, code, { cents: rate < 100 })}`}
         </span>
       </div>
       <section className="glass card" style={{ marginTop: 16 }}>
@@ -381,7 +394,7 @@ function Review(props: {
               </span>
               <span className="txt">
                 <strong>Lend unused months</strong>
-                <span>{fmtUSD(lendSaving(rent, months))} off Stroop’s fee</span>
+                <span>{fmtCAD(lendSaving(rent, months))} off Stroop’s fee</span>
               </span>
               <span className="switch" aria-hidden />
             </button>

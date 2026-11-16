@@ -2,8 +2,8 @@ import { fromUnits } from '../stellar'
 import { useTween } from '../hooks'
 import { fmtMoney } from '../money'
 
-/** A big amount that eases to new values, so money visibly moves when it moves. US$ units by default. */
-export function Amount({ units, code = 'USD', size }: { units: bigint | number; code?: string; size?: 'md' }) {
+/** A big amount that eases to new values, so money visibly moves when it moves. C$ by default. */
+export function Amount({ units, code = 'CAD', size }: { units: bigint | number; code?: string; size?: 'md' }) {
   const target = typeof units === 'bigint' ? fromUnits(units) : units
   const shown = useTween(target)
   const text = fmtMoney(shown, code, { cents: true })
