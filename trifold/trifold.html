@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stroop Trifold</title>
+<!--
+  One source for the whole board. 16 letter sheets (11 x 8.5 in, landscape), each holding one rounded
+  card that stays 0.4 in clear of the paper edge, so any home printer prints it whole and the white
+  gaps between cards are part of the design. All cards share one board-wide light field, so the
+  tiles read as one picture once they're on the board.
+  Views: trifold.html (print sheets) · ?mode=board (assembled preview) · ?mode=guide (assembly guide)
+-->
+<style>
+@font-face { font-family: 'Geist'; src: url(fonts/geist-latin.woff2) format('woff2'); font-weight: 100 900; }
+@font-face { font-family: 'Geist Mono'; src: url(fonts/geist-mono-latin.woff2) format('woff2'); font-weight: 100 900; }
+
+:root {
+  --ink: #141519;
+  --ink-2: #4a4d55;
+  --ink-3: #5f626a;
+  --syrup: #e8912a;     /* locked: held by the lease rules */
+  --syrup-ink: #8a4f0b;
+  --back: #2b7a54;      /* back to the family, verified */
+  --back-ink: #1f5c3f;
+  --danger: #b42318;    /* wire-it-upfront risk, blocked */
+  --hair: rgba(20, 21, 25, 0.12);
+  --gap: 0.4in;         /* card inset from the paper edge = half the gap between cards */
+  --pad: 0.55in;
+  --font: 'Geist', ui-sans-serif, system-ui, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, monospace;
+}
+@page { size: 11in 8.5in; margin: 0; }
+@page guide { size: 8.5in 11in; margin: 0; }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: #fff; color: var(--ink); font-family: var(--font);
+  -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+h1, h2, h3, p { margin: 0; font-weight: inherit; }
+svg { display: block; }
+
+/* ---------- Sheet + card ---------- */
+.sheet { position: relative; width: 11in; height: 8.5in; overflow: hidden; background: #fff; break-after: page; }
+.sheet-id { position: absolute; left: 0.42in; top: 0.13in; font: 500 7pt var(--mono); color: #c4c4c4; letter-spacing: 0.04em; }
+.card {
+  position: absolute; inset: var(--gap); border-radius: 0.42in; overflow: hidden; padding: var(--pad);
+  display: flex; flex-direction: column;
+  /* One light field for the whole 48 x 36 in board; each card shows its own window onto it. */
+  background:
+    radial-gradient(14in 11in at 24in 9in, rgba(232, 145, 42, 0.30), transparent 70%),
+    radial-gradient(12in 10in at 4in 27in, rgba(240, 168, 96, 0.30), transparent 70%),
+    radial-gradient(13in 10in at 45in 30in, rgba(236, 160, 110, 0.30), transparent 70%),
+    radial-gradient(10in 8in at 44in 4in, rgba(214, 196, 150, 0.35), transparent 70%),
+    linear-gradient(180deg, #f8f4ec, #f3ede3);
+  background-size: 48in 36in;
+  background-position: calc(-1 * (var(--x) + var(--gap))) calc(-1 * (var(--y) + var(--gap)));
+  box-shadow: inset 0 0 0 1.2pt rgba(255, 255, 255, 0.9);
+}
+.card.dark {
+  color: #fff;
+  background:
+    radial-gradient(9in 7in at 100% 0%, rgba(232, 145, 42, 0.34), transparent 62%),
+    radial-gradient(6in 5in at 0% 100%, rgba(232, 145, 42, 0.12), transparent 70%),
+    #141519;
+  box-shadow: none;
+}
+.glass {
+  background: rgba(255, 255, 255, 0.62); border-radius: 0.3in;
+  box-shadow: inset 0 0 0 1.4pt rgba(255, 255, 255, 0.95), 0 0.14in 0.4in -0.18in rgba(74, 46, 12, 0.32);
+}
+
+/* ---------- Type ---------- */
+.eyebrow { font: 600 19pt/1 var(--font); color: var(--ink-3); letter-spacing: -0.005em; }
+.dark .eyebrow { color: rgba(255, 255, 255, 0.6); }
+.h-xl { font: 700 92pt/0.98 var(--font); letter-spacing: -0.045em; }
+.h-lg { font: 700 54pt/1.04 var(--font); letter-spacing: -0.035em; }
+.h-md { font: 650 38pt/1.06 var(--font); letter-spacing: -0.03em; }
+.body { font: 450 25pt/1.3 var(--font); color: var(--ink-2); letter-spacing: -0.01em; }
+.body b { color: var(--ink); font-weight: 650; }
+.small { font: 450 20pt/1.32 var(--font); color: var(--ink-2); }
+.fine { font: 450 11.5pt/1.4 var(--font); color: var(--ink-3); }
+.fig { font: 720 128pt/0.9 var(--font); letter-spacing: -0.055em; }
+.sup { font-size: 0.55em; vertical-align: 0.6em; color: var(--ink-3); font-weight: 500; margin-left: 0.08em; }
+.mono { font-family: var(--mono); letter-spacing: -0.01em; }
+.grow { flex: 1; }
+.row { display: flex; align-items: center; }
+
+/* ---------- Month tiles: the product's own unit of money ---------- */
+.tiles { display: grid; grid-template-columns: repeat(12, 0.66in); gap: 0.1in; }
+.tile { height: 0.66in; border-radius: 0.14in; display: grid; place-items: center;
+  font: 650 15pt/1 var(--font); color: rgba(255, 255, 255, 0.92); }
+.tile.locked { background: var(--syrup); }
+.tile.paid { background: var(--ink); }
+.tile.back { background: var(--back); }
+.tile svg { width: 0.3in; height: 0.3in; stroke: #fff; stroke-width: 3; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.key { display: flex; gap: 0.5in; margin-top: 0.26in; font: 500 21pt/1 var(--font); color: var(--ink-2); }
+.key b { font: 700 34pt/1 var(--font); letter-spacing: -0.035em; color: var(--ink); margin-right: 0.06in; }
+.key span { display: inline-flex; align-items: center; gap: 0.11in; }
+.key i { width: 0.24in; height: 0.24in; border-radius: 0.06in; display: inline-block; align-self: center; }
+
+/* ---------- Steps ---------- */
+.step-head { display: flex; align-items: center; gap: 0.24in; }
+.num { width: 0.66in; height: 0.66in; border-radius: 50%; background: var(--ink); color: #fff;
+  display: grid; place-items: center; font: 650 26pt/1 var(--font); flex: none; }
+.step .body { margin-top: 0.28in; max-width: 8.6in; font-size: 27pt; }
+
+.icon { stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.pill { display: inline-flex; align-items: center; gap: 0.12in; border-radius: 99in; padding: 0.1in 0.24in;
+  font: 600 19.5pt/1 var(--font); white-space: nowrap; }
+
+/* ---------- Stellar flow ---------- */
+.flow { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: stretch; gap: 0.12in; }
+.flow .node { background: rgba(255, 255, 255, 0.66); border-radius: 0.26in; padding: 0.24in 0.22in;
+  box-shadow: inset 0 0 0 1.4pt rgba(255, 255, 255, 0.95), 0 0.12in 0.34in -0.16in rgba(74, 46, 12, 0.3); }
+.flow .node.hero { background: #141519; color: #fff; box-shadow: none; }
+.flow .icon { width: 0.5in; height: 0.5in; }
+.flow .hero .icon { color: var(--syrup); }
+.flow .t { font: 680 23pt/1.1 var(--font); letter-spacing: -0.02em; margin-top: 0.18in; }
+.flow .s { font: 450 19pt/1.26 var(--font); color: var(--ink-2); margin-top: 0.08in; }
+.flow .hero .s { color: rgba(255, 255, 255, 0.72); }
+.flow .arrow { align-self: center; font: 500 28pt/1 var(--font); color: var(--ink-3); }
+
+/* ---------- Board preview ---------- */
+body.board { background: #e9e7e2; overflow: hidden; }
+#board { position: relative; width: 48in; height: 36in; transform-origin: 0 0; background: #fbfbfa;
+  box-shadow: 0 0.4in 1.2in rgba(0, 0, 0, 0.18); }
+#board .sheet { position: absolute; left: var(--x); top: var(--y); background: transparent; }
+#board .sheet-id { display: none; }
+#board .fold { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px solid rgba(0, 0, 0, 0.07); }
+
+/* ---------- Assembly guide ---------- */
+.guide { page: guide; width: 8.5in; height: 11in; padding: 0.55in 0.65in; overflow: hidden; font: 450 11.5pt/1.42 var(--font); color: var(--ink-2); }
+.guide h1 { font: 700 26pt/1.1 var(--font); color: var(--ink); letter-spacing: -0.03em; margin-bottom: 0.08in; }
+.guide h2 { font: 650 13.5pt/1.2 var(--font); color: var(--ink); margin: 0.2in 0 0.06in; }
+.guide ol { margin: 0; padding-left: 0.24in; }
+.guide li { margin: 0.05in 0; }
+.guide b { color: var(--ink); }
+.map { margin-top: 0.2in; }
+@media screen { body:not(.board) .sheet, .guide { margin: 0.3in auto; box-shadow: 0 2px 16px rgba(0, 0, 0, 0.12); } body:not(.board) { background: #ddd; } }
+</style>
+</head>
+<body>
+<script src="qr/index.js"></script>
+
+<!-- Icon sprites (Lucide, ISC) -->
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-house" viewBox="0 0 24 24"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></symbol>
+  <symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></symbol>
+  <symbol id="i-bank" viewBox="0 0 24 24"><path d="M3 22h18"/><path d="M6 18v-7"/><path d="M10 18v-7"/><path d="M14 18v-7"/><path d="M18 18v-7"/><path d="M12 2 20 7H4z"/></symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M4 22V4a1 1 0 0 1 .4-.8A6 6 0 0 1 8 2c3 0 5 2 7.333 2q2 0 3.067-.8A1 1 0 0 1 20 4v10a1 1 0 0 1-.4.8A6 6 0 0 1 16 16c-3 0-5-2-8-2a6 6 0 0 0-4 1.528"/></symbol>
+</svg>
+
+<main id="sheets">
+
+<!-- ============ LEFT WING · Two strangers ============ -->
+
+<section class="sheet" data-id="L1">
+  <div class="card dark">
+    <p class="eyebrow">What newcomers hear from landlords</p>
+    <h1 class="h-xl" style="margin-top:0.36in">“Pay 12 months<br>upfront.”</h1>
+    <div class="grow"></div>
+    <div style="border-top:1.2pt solid rgba(255,255,255,0.16); padding-top:0.3in; display:flex; gap:0.32in; align-items:flex-start">
+      <p style="font:600 21pt/1 var(--mono); color:var(--syrup); flex:none; padding-top:0.05in">2017</p>
+      <div>
+        <p style="font:450 24pt/1.32 var(--font); color:rgba(255,255,255,0.86); letter-spacing:-0.01em">My family moved from Singapore to Canada. We paid six months’ rent upfront, to a landlord we’d never met.</p>
+        <p style="font:500 17pt/1 var(--font); color:rgba(255,255,255,0.5); margin-top:0.16in">Nonit, co-founder</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" data-id="L2">
+  <div class="card">
+    <h2 class="h-md">Two strangers.<br>Neither can verify the other.</h2>
+    <div class="grow"></div>
+    <!-- 1 viewBox unit = 0.01 in, so font-size 34 prints at ~24.5 pt -->
+    <svg viewBox="0 0 910 430" style="width:9.1in; height:4.3in" aria-hidden="true">
+      <!-- the wire: money leaves before anyone is checked -->
+      <defs><marker id="ah" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="4.5" markerHeight="4.5" orient="auto"><path d="M0 0 10 5 0 10z" fill="#b42318"/></marker></defs>
+      <line x1="285" y1="130" x2="615" y2="130" stroke="#b42318" stroke-width="6" stroke-dasharray="16 12" marker-end="url(#ah)"/>
+      <text x="450" y="94" text-anchor="middle" font-family="Geist" font-weight="720" font-size="50" fill="#b42318" letter-spacing="-1.6">$12,000</text>
+      <text x="450" y="188" text-anchor="middle" font-family="Geist" font-weight="550" font-size="31" fill="#b42318">wired, sight unseen</text>
+      <!-- family -->
+      <circle cx="140" cy="130" r="125" fill="rgba(255,255,255,0.72)" stroke="#fff" stroke-width="3"/>
+      <use href="#i-users" x="80" y="70" width="120" height="120" class="icon" stroke="#141519" stroke-width="1.6"/>
+      <text x="140" y="332" text-anchor="middle" font-family="Geist" font-weight="680" font-size="40" fill="#141519" letter-spacing="-0.8">The family</text>
+      <text x="140" y="385" text-anchor="middle" font-family="Geist" font-weight="450" font-size="34" fill="#4a4d55">“Is it real?”</text>
+      <!-- landlord -->
+      <circle cx="770" cy="130" r="125" fill="rgba(255,255,255,0.72)" stroke="#fff" stroke-width="3"/>
+      <use href="#i-house" x="710" y="70" width="120" height="120" class="icon" stroke="#141519" stroke-width="1.6"/>
+      <text x="770" y="332" text-anchor="middle" font-family="Geist" font-weight="680" font-size="40" fill="#141519" letter-spacing="-0.8">The landlord</text>
+      <text x="770" y="385" text-anchor="middle" font-family="Geist" font-weight="450" font-size="34" fill="#4a4d55">“Can they pay?”</text>
+    </svg>
+  </div>
+</section>
+
+<section class="sheet" data-id="L3">
+  <div class="card">
+    <h2 class="h-md">It isn’t one family.</h2>
+    <div class="grow"></div>
+    <div style="display:grid; grid-template-columns:auto 1fr; gap:0.5in 0.45in; align-items:center">
+      <p class="fig" style="font-size:104pt">58%</p>
+      <p class="body">of newcomers to Canada <b>prepaid months of rent</b><span class="sup">1</span></p>
+      <p class="fig" style="font-size:104pt">$100K<span style="color:var(--ink-3); font-weight:500">+</span></p>
+      <p class="body"><b>lost to rental scams</b> by students in one city, in one year<span class="sup">2</span></p>
+    </div>
+    <div class="grow"></div>
+  </div>
+</section>
+
+<section class="sheet" data-id="L4">
+  <div class="card">
+    <p style="font:600 25pt/1.2 var(--font); color:var(--ink-2); letter-spacing:-0.01em">Every international student already proves they have</p>
+    <p class="fig" style="font-size:112pt; margin-top:0.2in">$23,448<span class="sup" style="font-size:0.3em; vertical-align:2.2em">3</span></p>
+    <p class="body" style="margin-top:0.22in">to get a study permit. <b>The landlord can’t see it.</b></p>
+    <div class="grow"></div>
+    <div class="glass" style="padding:0.3in 0.36in; background:rgba(255,255,255,0.72)">
+      <p style="font:680 32pt/1.1 var(--font); letter-spacing:-0.03em">Landlords don’t want your cash.<br>They want proof you can pay.</p>
+    </div>
+    <p class="fine" style="margin-top:0.2in">1 Nova Credit survey, via New Canadian Media · 2 Barrie, via CTV News · 3 IRCC study-permit living costs, applications from Sept 2026</p>
+  </div>
+</section>
+
+<!-- ============ CENTER · Stroop ============ -->
+
+<section class="sheet" data-id="C1">
+  <div class="card dark" style="justify-content:center">
+    <div class="row" style="gap:0.5in">
+      <svg viewBox="0 0 32 32" style="width:2in; height:2in; flex:none" aria-hidden="true">
+        <rect width="32" height="32" rx="9" fill="#fff" fill-opacity="0.08" stroke="#fff" stroke-opacity="0.18" stroke-width="0.4"/>
+        <rect x="6.5" y="6.5" width="8" height="8" rx="2.4" fill="#fff"/>
+        <rect x="17.5" y="6.5" width="8" height="8" rx="2.4" fill="#fff"/>
+        <rect x="6.5" y="17.5" width="8" height="8" rx="2.4" fill="#fff"/>
+        <rect x="17.5" y="17.5" width="8" height="8" rx="2.4" fill="#E8912A"/>
+      </svg>
+      <p style="font:700 150pt/1 var(--font); letter-spacing:-0.06em; margin-top:-0.1in">Stroop</p>
+    </div>
+    <p style="font:550 30pt/1.2 var(--font); color:rgba(255,255,255,0.72); letter-spacing:-0.015em; margin-top:0.42in">Safe rent for newcomers to Canada</p>
+  </div>
+</section>
+
+<section class="sheet" data-id="C2">
+  <div class="card" style="justify-content:center">
+    <h1 style="font:700 70pt/1 var(--font); letter-spacing:-0.045em">Proof of rent,<br>not prepayment.</h1>
+    <p class="body" style="margin-top:0.36in; max-width:8.4in">Rent is locked where the landlord can see it, paid out one month at a time.</p>
+    <div style="margin-top:0.4in">
+      <span class="pill" style="background:rgba(255,255,255,0.75); color:var(--back-ink); box-shadow:inset 0 0 0 1.2pt rgba(43,122,84,0.25)"><i style="width:0.15in;height:0.15in;border-radius:50%;background:var(--back);display:inline-block"></i>Live on Stellar testnet</span>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" data-id="C3">
+  <div class="card step">
+    <div class="step-head"><span class="num">1</span><h2 class="h-lg">Lock</h2></div>
+    <p class="body">The family locks a year of rent, from any country. <b>Nothing is wired to a stranger.</b></p>
+    <div class="grow"></div>
+    <div class="tiles" data-tiles="LLLLLLLLLLLL"></div>
+    <div class="key"><span><i style="background:var(--syrup)"></i><b>US$12,000</b> locked for 12 months</span></div>
+  </div>
+</section>
+
+<section class="sheet" data-id="C4">
+  <div class="card step" style="padding-right:0">
+    <div style="width:4.75in">
+      <div class="step-head"><span class="num">2</span><h2 class="h-lg">Verify</h2></div>
+      <p class="body">The landlord opens a link and sees the rent, locked for them.</p>
+      <p class="body" style="margin-top:0.24in"><b>No credit check. Free for landlords.</b></p>
+    </div>
+    <!-- Real screen: the public proof page, lease 24 on testnet -->
+    <div style="position:absolute; right:0.5in; top:1.6in; bottom:0; width:3.85in; border-radius:0.46in 0.46in 0 0; background:#141519; padding:0.1in 0.1in 0; box-shadow:0 0.2in 0.5in -0.15in rgba(74,46,12,0.45)">
+      <div style="width:100%; height:100%; border-radius:0.37in 0.37in 0 0; overflow:hidden; background:#f6efe3">
+        <img src="screens/proof.png" alt="Stroop proof of rent page: US$12,000 locked for the landlord" style="width:100%; display:block">
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" data-id="C5">
+  <div class="card step">
+    <div class="step-head"><span class="num">3</span><h2 class="h-lg">Paid monthly</h2></div>
+    <p class="body">One month goes to the landlord each rent day. <b>Never early.</b></p>
+    <div class="grow"></div>
+    <div class="row" style="justify-content:space-between; margin-bottom:0.3in">
+      <span class="pill" style="background:rgba(180,35,24,0.1); color:var(--danger); font-size:19pt; padding:0.14in 0.28in"><svg class="icon" width="26" height="26" style="width:0.28in;height:0.28in" stroke-width="2.4"><use href="#i-ban"/></svg>Collect month 4 early? Refused by the contract.</span>
+    </div>
+    <div class="tiles" data-tiles="PPPLLLLLLLLL"></div>
+    <div class="key"><span><i style="background:var(--ink)"></i><b>US$3,000</b> paid</span><span><i style="background:var(--syrup)"></i><b>US$9,000</b> still locked</span></div>
+  </div>
+</section>
+
+<section class="sheet" data-id="C6">
+  <div class="card step">
+    <div class="step-head"><span class="num" style="background:transparent; color:var(--back); box-shadow:inset 0 0 0 3pt var(--back)"><svg class="icon" style="width:0.34in;height:0.34in" stroke-width="2.6"><use href="#i-undo"/></svg></span><h2 class="h-lg">Fake listing?</h2></div>
+    <p class="body">No keys by move-in day, no rent. <b>Every month returns to the family</b>, and Stroop charges nothing.</p>
+    <div class="grow"></div>
+    <div class="tiles" data-tiles="BBBBBBBBBBBB"></div>
+    <div class="key"><span><i style="background:var(--back)"></i><b>US$12,000</b> back to the family</span></div>
+  </div>
+</section>
+
+<section class="sheet" data-id="C7">
+  <div class="card">
+    <p class="eyebrow">Why Stellar</p>
+    <h2 class="h-md" style="margin-top:0.2in">Neither side has to trust<br>the other, or us.</h2>
+    <div class="grow"></div>
+    <!-- How the money moves on Stellar: in from any country, held by the contract, out to a bank -->
+    <div class="flow">
+      <div class="node"><svg class="icon"><use href="#i-globe"/></svg><p class="t">USDC</p><p class="s">Paid in from any country</p></div>
+      <span class="arrow">→</span>
+      <div class="node hero"><svg class="icon"><use href="#i-shield"/></svg><p class="t">Soroban contract</p><p class="s">Pays only the landlord or the family</p></div>
+      <span class="arrow">→</span>
+      <div class="node"><svg class="icon"><use href="#i-bank"/></svg><p class="t">Anchor</p><p class="s">Cashed out to a bank</p></div>
+    </div>
+    <p class="small" style="margin-top:0.26in">Even a dispute can only split the rent between those two. Under 1¢ per payout.</p>
+  </div>
+</section>
+
+<section class="sheet" data-id="C8">
+  <div class="card">
+    <h2 class="h-md">See it for yourself</h2>
+    <p class="small" style="margin-top:0.12in">Every lease is a public record on Stellar.</p>
+    <div class="grow"></div>
+    <div id="qr-row" style="display:flex; gap:0.7in; justify-content:flex-start"></div>
+  </div>
+</section>
+
+<!-- ============ RIGHT WING · Who, how, next ============ -->
+
+<section class="sheet" data-id="R1">
+  <div class="card">
+    <h2 class="h-md">Who we serve first</h2>
+    <div class="grow"></div>
+    <div id="tiers"></div>
+    <div class="grow"></div>
+    <div class="row" style="gap:0.2in; border-top:1.2pt solid var(--hair); padding-top:0.24in">
+      <svg class="icon" style="width:0.42in;height:0.42in;flex:none;color:var(--ink-2)"><use href="#i-chat"/></svg>
+      <p class="small"><b style="color:var(--ink);font-weight:650">We’ve talked to 10+ international students</b> at Waterloo and 5 immigrant families.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" data-id="R2">
+  <div class="card">
+    <h2 class="h-md">Each side brings the other</h2>
+    <div class="grow"></div>
+    <svg viewBox="0 0 910 330" style="width:9.1in; height:3.3in" aria-hidden="true">
+      <defs><marker id="ah2" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 10 5 0 10z" fill="#141519"/></marker></defs>
+      <!-- top arc: family to landlord -->
+      <path d="M215 120 C 330 20, 580 20, 695 120" fill="none" stroke="#141519" stroke-width="4.5" marker-end="url(#ah2)"/>
+      <text x="455" y="38" text-anchor="middle" font-family="Geist" font-weight="620" font-size="31" fill="#141519">proof link · landlord joins free</text>
+      <!-- bottom arc: landlord to the next family -->
+      <path d="M695 212 C 580 312, 330 312, 215 212" fill="none" stroke="#e8912a" stroke-width="4.5" marker-end="url(#ah3)"/>
+      <defs><marker id="ah3" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 10 5 0 10z" fill="#e8912a"/></marker></defs>
+      <text x="455" y="322" text-anchor="middle" font-family="Geist" font-weight="620" font-size="31" fill="#8a4f0b">“Stroop accepted” · next student</text>
+      <circle cx="140" cy="166" r="92" fill="rgba(255,255,255,0.72)" stroke="#fff" stroke-width="3"/>
+      <use href="#i-users" x="104" y="112" width="72" height="72" class="icon" stroke="#141519" stroke-width="1.7"/>
+      <text x="140" y="222" text-anchor="middle" font-family="Geist" font-weight="650" font-size="30" fill="#141519">Families</text>
+      <circle cx="770" cy="166" r="92" fill="rgba(255,255,255,0.72)" stroke="#fff" stroke-width="3"/>
+      <use href="#i-house" x="734" y="112" width="72" height="72" class="icon" stroke="#141519" stroke-width="1.7"/>
+      <text x="770" y="222" text-anchor="middle" font-family="Geist" font-weight="650" font-size="30" fill="#141519">Landlords</text>
+    </svg>
+    <div class="grow"></div>
+    <p class="small">Reach families before they land: <b style="color:var(--ink);font-weight:650">immigration consultants</b> (one already open to it) and student offices.</p>
+  </div>
+</section>
+
+<section class="sheet" data-id="R3">
+  <div class="card">
+    <div class="row" style="gap:0.45in; align-items:center">
+      <p class="fig" style="font-size:120pt">0.5%</p>
+      <div>
+        <p class="body">of the locked rent, paid by the family <b>only after move-in.</b></p>
+        <p class="body" style="margin-top:0.14in"><b>Landlords pay nothing.</b></p>
+      </div>
+    </div>
+    <div class="grow"></div>
+    <div class="glass" style="padding:0.3in 0.36in">
+      <div class="row" style="justify-content:space-between; align-items:flex-end">
+        <div><p style="font:700 44pt/1 var(--font); letter-spacing:-0.035em">690K</p><p class="small" style="margin-top:0.08in">international students</p></div>
+        <p style="font:500 30pt/1 var(--font); color:var(--ink-3); padding-bottom:0.34in">×</p>
+        <div><p style="font:700 44pt/1 var(--font); letter-spacing:-0.035em">~$12K</p><p class="small" style="margin-top:0.08in">rent a year</p></div>
+        <p style="font:500 30pt/1 var(--font); color:var(--ink-3); padding-bottom:0.34in">→</p>
+        <div><p style="font:700 44pt/1 var(--font); letter-spacing:-0.035em">$41M</p><p class="small" style="margin-top:0.08in">whole market at 0.5%</p></div>
+      </div>
+    </div>
+    <p class="fine" style="margin-top:0.2in">Our estimate, Canada only. Next: 394K new permanent residents a year, 304M migrants worldwide (UN).</p>
+  </div>
+</section>
+
+<section class="sheet" data-id="R4">
+  <div class="card">
+    <h2 class="h-md">Why us</h2>
+    <div id="team" style="margin-top:0.3in"></div>
+    <div class="grow"></div>
+    <div class="glass" style="padding:0.26in 0.34in; display:flex; align-items:center; gap:0.26in; background:#141519; box-shadow:none; color:#fff">
+      <svg class="icon" style="width:0.48in;height:0.48in;flex:none;color:var(--syrup)"><use href="#i-flag"/></svg>
+      <p style="font:650 26pt/1.15 var(--font); letter-spacing:-0.02em">Next: 10 real leases by Jan 31</p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script>
+/* ---------- Content data (edit here) ---------- */
+// Leave `line` empty to show just the name.
+const TEAM = [
+  { name: 'Nonit', line: 'Lived it. Software engineer.' },
+  { name: 'Jinay', line: 'Robotics world champion, low-level programmer.' },
+  { name: 'Jackson', line: '' },
+  { name: 'Dylan', line: '' },
+]
+const TIERS = [
+  { title: 'Newcomers', sub: 'International students first, then immigrant families', tag: 'Pays 0.5%', tone: 'ink' },
+  { title: 'Independent landlords', sub: 'A few units near campus, no way to screen newcomers', tag: 'Free', tone: 'back' },
+  { title: 'Chains and REITs', sub: 'Already screen tenants', tag: 'Later', tone: 'mute' },
+]
+
+/* ---------- Board geometry ---------- */
+// 36 x 48 in trifold: 12 in wing · 24 in center · 12 in wing. Sheets are 11 x 8.5 in, stacked 4 high from 1 in down.
+const ROWS = [1, 9.5, 18, 26.5]
+const COLS = { L: [0.5], C: [13, 24], R: [36.5] }
+const PLACE = {}
+;['L1','L2','L3','L4'].forEach((id, i) => PLACE[id] = [COLS.L[0], ROWS[i]])
+;['R1','R2','R3','R4'].forEach((id, i) => PLACE[id] = [COLS.R[0], ROWS[i]])
+;['C1','C2','C3','C4','C5','C6','C7','C8'].forEach((id, i) => PLACE[id] = [COLS.C[i % 2], ROWS[Math.floor(i / 2)]])
+
+const ORDER = ['L1','L2','L3','L4','C1','C2','C3','C4','C5','C6','C7','C8','R1','R2','R3','R4']
+const NAMES = { L: 'Left wing', C: 'Center', R: 'Right wing' }
+
+function sheetLabel(id) {
+  const [x, y] = PLACE[id]
+  const row = ROWS.indexOf(y) + 1
+  const side = id[0] === 'C' ? (x === COLS.C[0] ? ', left' : ', right') : ''
+  return `${ORDER.indexOf(id) + 1}/16 · ${id} · ${NAMES[id[0]]}, row ${row}${side}`
+}
+
+/* ---------- Render data-driven parts ---------- */
+const ICON = (id) => `<svg viewBox="0 0 24 24"><use href="#i-${id}"/></svg>`
+document.querySelectorAll('[data-tiles]').forEach((el) => {
+  const months = 'JFMAMJJASOND'
+  el.innerHTML = [...el.dataset.tiles].map((s, i) =>
+    s === 'P' ? `<div class="tile paid">${ICON('check')}</div>`
+    : s === 'B' ? `<div class="tile back">${ICON('undo')}</div>`
+    : `<div class="tile locked">${months[i]}</div>`).join('')
+})
+
+document.getElementById('tiers').innerHTML = TIERS.map((t, i) => {
+  const tag = { ink: 'background:#141519;color:#fff', back: 'background:rgba(255,255,255,0.8);color:#1f5c3f;box-shadow:inset 0 0 0 1.2pt rgba(43,122,84,0.3)', mute: 'background:rgba(20,21,25,0.07);color:#4a4d55' }[t.tone]
+  return `<div class="row" style="gap:0.3in; padding:0.2in 0; ${i ? 'border-top:1.2pt solid var(--hair);' : ''} opacity:${t.tone === 'mute' ? 0.55 : 1}">
+    <span style="font:650 22pt/1 var(--mono); color:var(--ink-3); width:0.3in">${i + 1}</span>
+    <div class="grow"><p style="font:650 27pt/1.12 var(--font); letter-spacing:-0.02em">${t.title}</p><p class="small" style="margin-top:0.04in">${t.sub}</p></div>
+    <span class="pill" style="${tag}">${t.tag}</span></div>`
+}).join('')
+
+document.getElementById('team').innerHTML = TEAM.map((m, i) => `
+  <div class="row" style="gap:0.26in; padding:0.12in 0">
+    <span style="width:0.66in; height:0.66in; border-radius:0.2in; flex:none; display:grid; place-items:center; font:650 24pt/1 var(--font); color:#fff; background:${i ? '#141519' : 'var(--syrup)'}">${m.name[0]}</span>
+    <div><p style="font:650 27pt/1.1 var(--font); letter-spacing:-0.02em">${m.name}</p>${m.line ? `<p class="small" style="margin-top:0.03in">${m.line}</p>` : ''}</div>
+  </div>`).join('')
+
+// QR codes: only the ones with a real URL (qr-urls.json -> make-qr.mjs). Sized to fill the row.
+const qrs = window.QR || []
+const qrSize = qrs.length >= 4 ? 1.62 : qrs.length === 3 ? 2.1 : 2.35
+document.getElementById('qr-row').innerHTML = qrs.map((q) => `
+  <div style="width:${qrSize + 0.36}in">
+    <div class="glass" style="padding:0.18in; background:#fff; width:${qrSize + 0.36}in"><img src="${q.svg}" alt="" style="width:${qrSize}in; height:${qrSize}in; display:block"></div>
+    <p style="font:650 ${qrs.length >= 4 ? 18 : 21}pt/1.15 var(--font); margin-top:0.18in; letter-spacing:-0.01em">${q.label}</p>
+    <p style="font:450 ${qrs.length >= 4 ? 13 : 15}pt/1.25 var(--font); color:var(--ink-3); margin-top:0.04in">${q.sub}</p>
+  </div>`).join('')
+
+/* ---------- Position every sheet in board coordinates ---------- */
+document.querySelectorAll('.sheet').forEach((s) => {
+  const [x, y] = PLACE[s.dataset.id]
+  s.style.setProperty('--x', x + 'in')
+  s.style.setProperty('--y', y + 'in')
+  s.insertAdjacentHTML('beforeend', `<span class="sheet-id">${sheetLabel(s.dataset.id)}</span>`)
+})
+
+/* ---------- Views ---------- */
+const mode = new URLSearchParams(location.search).get('mode')
+if (mode === 'board') {
+  document.body.classList.add('board')
+  const board = document.createElement('div')
+  board.id = 'board'
+  board.innerHTML = '<div class="fold" style="left:12in"></div><div class="fold" style="left:36in"></div>'
+  document.querySelectorAll('.sheet').forEach((s) => board.appendChild(s))
+  document.getElementById('sheets').replaceWith(board)
+  const fit = () => { board.style.transform = `scale(${Math.min(innerWidth / (48 * 96), innerHeight / (36 * 96))})` }
+  fit(); addEventListener('resize', fit)
+}
+if (mode === 'guide') {
+  document.getElementById('sheets').replaceWith(buildGuide())
+}
+
+function buildGuide() {
+  const g = document.createElement('div')
+  const S = 7 // px per inch in the map
+  const boxes = ORDER.map((id) => {
+    const [x, y] = PLACE[id]
+    return `<rect x="${x * S}" y="${y * S}" width="${11 * S}" height="${8.5 * S}" fill="#f6efe3" stroke="#141519" stroke-width="1"/>
+      <text x="${(x + 5.5) * S}" y="${(y + 4.25) * S + 9}" text-anchor="middle" font-family="Geist" font-weight="700" font-size="24" fill="#141519">${id}</text>
+      <text x="${(x + 5.5) * S}" y="${(y + 4.25) * S + 26}" text-anchor="middle" font-family="Geist" font-size="10" fill="#5f626a">sheet ${ORDER.indexOf(id) + 1}</text>`
+  }).join('')
+  g.innerHTML = `<section class="guide">
+    <h1>Stroop trifold: print and assemble</h1>
+    <p>16 letter sheets, landscape. Don’t glue this page.</p>
+    <svg class="map" viewBox="-10 -16 ${48 * S + 20} ${36 * S + 22}" style="width:4.7in; display:block; margin:0.1in auto 0">
+      <rect x="0" y="0" width="${48 * S}" height="${36 * S}" fill="#fff" stroke="#9a9a9a" stroke-width="1.5"/>
+      <line x1="${12 * S}" y1="0" x2="${12 * S}" y2="${36 * S}" stroke="#9a9a9a" stroke-dasharray="4 4"/>
+      <line x1="${36 * S}" y1="0" x2="${36 * S}" y2="${36 * S}" stroke="#9a9a9a" stroke-dasharray="4 4"/>
+      ${boxes}
+      <text x="${6 * S}" y="-4" text-anchor="middle" font-family="Geist" font-size="11" fill="#4a4d55">Left wing · 12 in</text>
+      <text x="${24 * S}" y="-4" text-anchor="middle" font-family="Geist" font-size="11" fill="#4a4d55">Center · 24 in</text>
+      <text x="${42 * S}" y="-4" text-anchor="middle" font-family="Geist" font-size="11" fill="#4a4d55">Right wing · 12 in</text>
+    </svg>
+    <p style="text-align:center; font-size:10.5pt; margin-top:0.06in">Open board 48 × 36 in. Sheets 11 × 8.5 in, touching edge to edge: the white paper borders are the gaps between tiles.</p>
+    <h2>Print</h2>
+    <ol>
+      <li>Open <b>stroop-trifold-sheets.pdf</b>. Print in <b>colour</b>, <b>landscape</b>, scale <b>“Actual size” / 100%</b> (not “Fit”). Turn off “two-sided”.</li>
+      <li>Thicker matte paper (28–32 lb) wrinkles less under glue. Plain paper works.</li>
+      <li>Every sheet has its code (L1, C3, …) in tiny grey type at the top-left corner.</li>
+    </ol>
+    <h2>Assemble (about 15 minutes)</h2>
+    <ol>
+      <li><b>Mark the top line:</b> pencil a line 1 in below the top edge across the whole open board.</li>
+      <li><b>Left wing:</b> L1 to L4 top to bottom, 0.5 in in from the wing’s outer edge, each sheet touching the one above.</li>
+      <li><b>Center:</b> two columns, 1 in in from each fold. Odd codes on the left (C1, C3, C5, C7), even on the right (C2, C4, C6, C8).</li>
+      <li><b>Right wing:</b> R1 to R4, 0.5 in in from the wing’s outer edge.</li>
+      <li>Glue stick or double-sided tape on all four edges of the back, plus an X in the middle.</li>
+    </ol>
+    <h2>If the board is a different size</h2>
+    <p>Wings narrower than 11 in won’t fit a sheet. If the center is 22–23 in wide (some boards), butt the two center columns together and centre them. Taller or shorter board: keep the 1 in top margin and let the bottom margin change.</p>
+  </section>`
+  return g
+}
+</script>
+</body>
+</html>
