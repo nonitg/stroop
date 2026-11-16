@@ -114,7 +114,10 @@ export const short = (a: string) => `${a.slice(0, 4)}…${a.slice(-4)}`
 
 // ---------- Demo wallets (testnet only; production would use passkey smart wallets) ----------
 
-const keyName = (role: Role) => `rp:key:${role}`
+// Saved per contract deployment: a browser that used an older version starts with fresh accounts.
+const NS = `rp:${ids.rentReserve.slice(0, 8)}`
+const TXS_KEY = `${NS}:txs`
+const keyName = (role: Role) => `${NS}:key:${role}`
 
 export function getKeypair(role: Role): Keypair | null {
   try {
@@ -127,7 +130,7 @@ export function getKeypair(role: Role): Keypair | null {
 
 export function resetDemo() {
   for (const role of ['family', 'landlord'] as Role[]) localStorage.removeItem(keyName(role))
-  localStorage.removeItem('rp:txs')
+  localStorage.removeItem(TXS_KEY)
 }
 
 /** Creates a testnet wallet: XLM for network fees and a trustline so it can hold C$. Money comes later, through the on-ramp. */
@@ -335,9 +338,18 @@ export async function recentLeases(limit = 40): Promise<Lease[]> {
   return leases.filter((l): l is Lease => !!l)
 }
 
-/** Leases where `pub` is the payer or landlord, newest first. */
+/**
+ * Leases where `pub` is the payer or landlord, newest first. Scans the newest leases plus any
+ * this browser acted on, so a lease isn't lost when many other people use the shared demo.
+ */
 export async function leasesFor(pub: string): Promise<Lease[]> {
-  return (await recentLeases()).filter((l) => l.payer === pub || l.landlord === pub)
+  const recent = await recentLeases()
+  const seen = new Set(recent.map((l) => l.id))
+  const older = [...new Set(allTxs().map((t) => t.leaseId))].filter((id) => !seen.has(id))
+  const extra = await Promise.all(older.map((id) => getLease(id).catch(() => null)))
+  return [...recent, ...extra.filter((l): l is Lease => !!l)]
+    .filter((l) => l.payer === pub || l.landlord === pub)
+    .sort((a, b) => b.id - a.id)
 }
 
 // Mirrors the contract: time the student has to dispute after the keys are handed
@@ -379,9 +391,9 @@ export interface TxLog {
 
 export function logTx(entry: TxLog) {
   try {
-    const all: TxLog[] = JSON.parse(localStorage.getItem('rp:txs') ?? '[]')
+    const all: TxLog[] = JSON.parse(localStorage.getItem(TXS_KEY) ?? '[]')
     all.push(entry)
-    localStorage.setItem('rp:txs', JSON.stringify(all.slice(-200)))
+    localStorage.setItem(TXS_KEY, JSON.stringify(all.slice(-200)))
   } catch {
     /* storage unavailable; links are a convenience */
   }
@@ -389,7 +401,7 @@ export function logTx(entry: TxLog) {
 
 export function txsFor(leaseId: number): TxLog[] {
   try {
-    const all: TxLog[] = JSON.parse(localStorage.getItem('rp:txs') ?? '[]')
+    const all: TxLog[] = JSON.parse(localStorage.getItem(TXS_KEY) ?? '[]')
     return all.filter((t) => t.leaseId === leaseId)
   } catch {
     return []
@@ -399,7 +411,7 @@ export function txsFor(leaseId: number): TxLog[] {
 /** Every logged transaction in this browser, newest first. */
 export function allTxs(): TxLog[] {
   try {
-    const all: TxLog[] = JSON.parse(localStorage.getItem('rp:txs') ?? '[]')
+    const all: TxLog[] = JSON.parse(localStorage.getItem(TXS_KEY) ?? '[]')
     return all.reverse()
   } catch {
     return []
