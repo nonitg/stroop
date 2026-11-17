@@ -1,4 +1,4 @@
-# RentProof
+# Stroop
 
 **Proof of rent, not prepayment.**
 
